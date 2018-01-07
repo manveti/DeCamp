@@ -6,8 +6,16 @@ using System.Threading.Tasks;
 
 namespace DeCamp {
     class Event {
-        //in-game start time
-        //in-game end time (optional)
-        //real-world timestamp
+        public Timestamp start, end;
+        public DateTime timestamp;
+        //access
+        public String title, description;
+        //...
+
+        public Event() {
+            //...
+            this.timestamp = DateTime.UtcNow;
+            //...
+        }
     }
 }
