@@ -8,18 +8,24 @@ namespace DeCamp {
     abstract class Timestamp {
         public enum Interval { year, month, week, day, time, hour, minute, second };
 
+        protected Interval precision;
+
         public abstract String toString(bool date = true, bool time = false);
-        public abstract void add(int amount, Interval unit = Interval.second);
+        public abstract void adjust(int amount, Interval unit = Interval.second);
+        public abstract void set(int value, Interval unit);
 
         public Timestamp copy() {
             return (Timestamp)this.MemberwiseClone();
+        }
+
+        public void setPrecision(Interval p) {
+            this.precision = p;
         }
     }
 
     abstract class SimpleDate : Timestamp {
         protected int year;
         protected int time;
-        protected Interval precision;
         protected Tuple<String, int>[] months;
         protected String dateFormat;
 
@@ -53,7 +59,7 @@ namespace DeCamp {
             return retval;
         }
 
-        public override void add(int amount, Interval unit = Interval.second) {
+        public override void adjust(int amount, Interval unit = Interval.second) {
             if ((unit == Interval.week) || (unit == Interval.time)) { return; } // no default implementation for week; can't add time of day
             if (unit == Interval.year) {
                 this.year += amount;
@@ -101,6 +107,42 @@ namespace DeCamp {
             }
         }
 
+        public override void set(int value, Interval unit) {
+            Tuple<int, int> d;
+            int tail;
+
+            switch (unit) {
+            case Interval.year:
+                this.year = value;
+                break;
+            case Interval.month:
+                d = this.getDate();
+                this.setDate(value, d.Item2);
+                break;
+            case Interval.day:
+                d = this.getDate();
+                this.setDate(d.Item1, value);
+                break;
+            case Interval.time:
+                // fall through to hour case
+            case Interval.hour:
+                tail = this.time % this.getDayLength();
+                this.time -= tail;
+                this.time += value * 60 * 60 + (tail % (60 * 60));
+                break;
+            case Interval.minute:
+                tail = this.time % (60 * 60);
+                this.time -= tail;
+                this.time += value * 60 + (tail % 60);
+                break;
+            case Interval.second:
+                this.time -= (this.time % 60);
+                this.time += value;
+                break;
+            }
+            if (this.precision < unit) { this.precision = unit; }
+        }
+
         protected virtual String getWeekday() {
             return null;
         }
@@ -114,8 +156,33 @@ namespace DeCamp {
             return new Tuple<int, int>(month + 1, date);
         }
 
+        protected virtual void setDate(int month, int date) {
+            while (month > 0) {
+                month -= 1;
+                date += this.months[month].Item2;
+            }
+            this.setDayOfYear(date);
+        }
+
         protected virtual int getDayOfYear() {
             return (this.time / this.getDayLength()) + 1;
+        }
+
+        protected virtual void setDayOfYear(int date) {
+            this.time = (date - 1) * this.getDayLength() + this.getTime();
+        }
+
+        protected virtual int getTime() {
+            return this.time % this.getDayLength();
+        }
+
+        protected virtual void setTime(int time) {
+            this.time -= this.getTime();
+            this.time += time;
+        }
+
+        protected virtual void setTime(int hour, int minute, int second) {
+            this.setTime(hour * 60 * 60 + minute * 60 + second);
         }
 
         protected virtual int getYearLength() {
@@ -153,7 +220,7 @@ namespace DeCamp {
             this.dateFormat = "Day {0}";
         }
 
-        public override void add(int amount, Interval unit = Interval.second) {
+        public override void adjust(int amount, Interval unit = Interval.second) {
             if (unit == Interval.time) { return; } // can't add time of day
             if (unit == Interval.year) {
                 amount *= 365; // treat year as shorthand for 365 days
@@ -224,7 +291,7 @@ namespace DeCamp {
             return this.days[(date.Item2 - 1) % this.days.Length];
         }
 
-        public override void add(int amount, Interval unit = Interval.second) {
+        public override void adjust(int amount, Interval unit = Interval.second) {
             if (unit == Interval.year) {
                 // deal with the fact that there's no year 0 in common reckoning
                 if ((this.year < 0) && (this.year + amount >= 0)) { this.year += 1; }
@@ -264,7 +331,7 @@ namespace DeCamp {
                 amount *= this.days.Length;
                 unit = Interval.day;
             }
-            base.add(amount, unit);
+            base.adjust(amount, unit);
         }
     }
 
@@ -295,7 +362,7 @@ namespace DeCamp {
             return this.days[(this.getDayOfYear() - 1) % this.days.Length];
         }
 
-        public override void add(int amount, Interval unit = Interval.second) {
+        public override void adjust(int amount, Interval unit = Interval.second) {
             if (unit == Interval.month) {
                 amount *= 28; // all months have 28 days
                 unit = Interval.day;
@@ -304,7 +371,7 @@ namespace DeCamp {
                 amount *= this.days.Length;
                 unit = Interval.day;
             }
-            base.add(amount, unit);
+            base.adjust(amount, unit);
         }
     }
 
@@ -352,7 +419,7 @@ namespace DeCamp {
             return (this.year % 4) == 0;
         }
 
-        public override void add(int amount, Interval unit = Interval.second) {
+        public override void adjust(int amount, Interval unit = Interval.second) {
             if (unit == Interval.time) { return; } // can't add time of day
             if (unit == Interval.year) {
                 this.year += amount;
@@ -410,16 +477,7 @@ namespace DeCamp {
                     // if we started on midsummer and can end on it (i.e. amount was a multiple of 12), do so
                     if ((wasMidsummer) && (month > 0) && (this.months[month - 1].Item2 <= 1)) { month -= 1; }
                 }
-                // turn month and date into day of year...
-                while (month > 0) {
-                    month -= 1;
-                    date += this.months[month].Item2;
-                    if ((this.months[month].Item2 == 0) && ((this.year % 4) == 0)) {
-                        date += 1;
-                    }
-                }
-                // ...then turn day of year into seconds since start of year
-                this.time = (date - 1) * this.getDayLength() + (this.time % this.getDayLength());
+                this.setDate(month, date);
                 return;
             }
             // we're not falling through from longer spans here, so we won't worry about overflow
@@ -436,6 +494,17 @@ namespace DeCamp {
                 this.year -= 1;
                 this.time += this.getYearLength() * this.getDayLength();
             }
+        }
+
+        protected override void setDate(int month, int date) {
+            while (month > 0) {
+                month -= 1;
+                date += this.months[month].Item2;
+                if ((this.months[month].Item2 == 0) && (this.isLeapYear())) {
+                    date += 1;
+                }
+            }
+            this.setDayOfYear(date);
         }
     }
 
@@ -514,7 +583,7 @@ namespace DeCamp {
             return this.days[day]; // Jan 1, 2001 was a Monday, so day 1 is this.days[1]
         }
 
-        public override void add(int amount, Interval unit = Interval.second) {
+        public override void adjust(int amount, Interval unit = Interval.second) {
             if (unit == Interval.time) { return; } // can't add time of day
             if (unit == Interval.year) {
                 // deal with the fact that there's no year 0 in common era
@@ -541,16 +610,7 @@ namespace DeCamp {
                         this.year -= 1;
                     }
                 }
-                // turn month and date into day of year...
-                while (month > 0) {
-                    month -= 1;
-                    date += this.months[month].Item2;
-                    if ((month == 1) && (this.isLeapYear())) {
-                        date += 1;
-                    }
-                }
-                // ...then turn day of year into seconds since start of year
-                this.time = (date - 1) * this.getDayLength() + (this.time % this.getDayLength());
+                this.setDate(month, date);
                 return;
             }
             // we're not falling through from longer spans here, so we won't worry about overflow
@@ -568,6 +628,17 @@ namespace DeCamp {
                 this.year -= 1;
                 this.time += this.getYearLength() * this.getDayLength();
             }
+        }
+
+        protected override void setDate(int month, int date) {
+            while (month > 0) {
+                month -= 1;
+                date += this.months[month].Item2;
+                if ((month == 1) && (this.isLeapYear())) {
+                    date += 1;
+                }
+            }
+            this.setDayOfYear(date);
         }
     }
 
