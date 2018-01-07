@@ -24,9 +24,21 @@ namespace DeCamp {
     }
 
     abstract class SimpleDate : Timestamp {
+        protected class Month {
+            public String name;
+            public int days;
+            public bool isVirtual;
+
+            public Month(String name, int days, bool isVirtual = false) {
+                this.name = name;
+                this.days = days;
+                this.isVirtual = isVirtual;
+            }
+        }
+
         protected int year;
         protected int time;
-        protected Tuple<String, int>[] months;
+        protected Month[] months;
         protected String dateFormat;
 
         public override String toString(bool date = true, bool time = false) {
@@ -37,7 +49,7 @@ namespace DeCamp {
                 String weekday = this.getWeekday();
                 if (weekday != null) { retval += weekday + ", "; }
                 Tuple<int, int> d = this.getDate();
-                retval += String.Format(this.dateFormat, d.Item2, this.months[d.Item1 - 1].Item1, this.year);
+                retval += String.Format(this.dateFormat, d.Item2, this.months[d.Item1 - 1].name, this.year);
             }
             if (date && time) { retval += " "; }
             if (time) {
@@ -69,14 +81,14 @@ namespace DeCamp {
                 // convert months to days, then fall through to logic for day, hour, minute, and second
                 int month = this.getDate().Item1 - 1, days = 0;
                 for (; amount > 0; amount--) {
-                    days += this.months[month].Item2;
+                    days += this.months[month].days;
                     month += 1;
                     if (month >= this.months.Length) { month = 0; }
                 }
                 for (; amount < 0; amount++) {
                     month -= 1;
                     if (month < 0) { month = this.months.Length - 1; }
-                    days -= this.months[month].Item2;
+                    days -= this.months[month].days;
                 }
                 amount = days;
                 unit = Interval.day;
@@ -149,8 +161,8 @@ namespace DeCamp {
 
         protected virtual Tuple<int, int> getDate() {
             int month = 0, date = this.getDayOfYear();
-            while ((month < this.months.Length) && (date > this.months[month].Item2)) {
-                date -= this.months[month].Item2;
+            while ((month < this.months.Length) && (date > this.months[month].days)) {
+                date -= this.months[month].days;
                 month += 1;
             }
             return new Tuple<int, int>(month + 1, date);
@@ -159,7 +171,7 @@ namespace DeCamp {
         protected virtual void setDate(int month, int date) {
             while (month > 0) {
                 month -= 1;
-                date += this.months[month].Item2;
+                date += this.months[month].days;
             }
             this.setDayOfYear(date);
         }
@@ -187,8 +199,8 @@ namespace DeCamp {
 
         protected virtual int getYearLength() {
             int retval = 0;
-            foreach (Tuple<String, int> month in this.months) {
-                retval += month.Item2;
+            foreach (Month month in this.months) {
+                retval += month.days;
             }
             return retval;
         }
@@ -216,7 +228,7 @@ namespace DeCamp {
             this.date = 1;
             this.time = 12 * 60 * 60;
             this.precision = Interval.time;
-            this.months = new Tuple<String, int>[] { new Tuple<string, int>("", int.MaxValue) };
+            this.months = new Month[] { new Month("", int.MaxValue) };
             this.dateFormat = "Day {0}";
         }
 
@@ -265,29 +277,29 @@ namespace DeCamp {
             this.year = 591;
             this.time = 12 * 60 * 60;
             this.precision = Interval.time;
-            this.months = new Tuple<String, int>[]{ new Tuple<String, int>("Needfest", 7),
-                                                    new Tuple<String, int>("Fireseek", 28),
-                                                    new Tuple<String, int>("Readying", 28),
-                                                    new Tuple<String, int>("Coldeven", 28),
-                                                    new Tuple<String, int>("Growfest", 7),
-                                                    new Tuple<String, int>("Planting", 28),
-                                                    new Tuple<String, int>("Flocktime", 28),
-                                                    new Tuple<String, int>("Wealsun", 28),
-                                                    new Tuple<String, int>("Richfest", 7),
-                                                    new Tuple<String, int>("Reaping", 28),
-                                                    new Tuple<String, int>("Goodmonth", 28),
-                                                    new Tuple<String, int>("Harvester", 28),
-                                                    new Tuple<String, int>("Brewfest", 7),
-                                                    new Tuple<String, int>("Patchwall", 28),
-                                                    new Tuple<String, int>("Ready'reat", 28),
-                                                    new Tuple<String, int>("Sunsebb", 28)};
+            this.months = new Month[]{ new Month("Needfest", 7, true),
+                                        new Month("Fireseek", 28),
+                                        new Month("Readying", 28),
+                                        new Month("Coldeven", 28),
+                                        new Month("Growfest", 7, true),
+                                        new Month("Planting", 28),
+                                        new Month("Flocktime", 28),
+                                        new Month("Wealsun", 28),
+                                        new Month("Richfest", 7, true),
+                                        new Month("Reaping", 28),
+                                        new Month("Goodmonth", 28),
+                                        new Month("Harvester", 28),
+                                        new Month("Brewfest", 7, true),
+                                        new Month("Patchwall", 28),
+                                        new Month("Ready'reat", 28),
+                                        new Month("Sunsebb", 28)};
             this.dateFormat = "{0} {1}, {2} CY";
             this.days = new String[]{ "Starday", "Sunday", "Moonday", "Godsday", "Waterday", "Earthday", "Freeday"};
         }
 
         protected override String getWeekday() {
             Tuple<int, int> date = this.getDate();
-            if (this.months[date.Item1 - 1].Item2 < 28) { return null; }
+            if (this.months[date.Item1 - 1].isVirtual) { return null; }
             return this.days[(date.Item2 - 1) % this.days.Length];
         }
 
@@ -303,25 +315,25 @@ namespace DeCamp {
                 // convert months to days, then fall through to logic for day, hour, minute, and second
                 int month = this.getDate().Item1 - 1, days = 0;
                 for (; amount > 0; amount--) {
-                    if (this.months[month].Item2 <= 7) {
+                    if (this.months[month].isVirtual) {
                         // skip over festivals
-                        days += this.months[month].Item2;
+                        days += this.months[month].days;
                         month += 1;
                         if (month >= this.months.Length) { month = 0; } // no end-of-year festival, so we should never need this
                     }
-                    days += this.months[month].Item2;
+                    days += this.months[month].days;
                     month += 1;
                     if (month >= this.months.Length) { month = 0; }
                 }
                 for (; amount < 0; amount++) {
                     month -= 1;
                     if (month < 0) { month = this.months.Length - 1; }
-                    days -= this.months[month].Item2;
-                    if (this.months[month].Item2 <= 7) {
+                    days -= this.months[month].days;
+                    if (this.months[month].isVirtual) {
                         // skip over festivals
                         month -= 1;
                         if (month < 0) { month = this.months.Length - 1; }
-                        days -= this.months[month].Item2;
+                        days -= this.months[month].days;
                     }
                 }
                 amount = days;
@@ -342,18 +354,18 @@ namespace DeCamp {
             this.year = 998;
             this.time = 12 * 60 * 60;
             this.precision = Interval.time;
-            this.months = new Tuple<String, int>[]{ new Tuple<String, int>("Zarantyr", 28),
-                                                    new Tuple<String, int>("Olarune", 28),
-                                                    new Tuple<String, int>("Therendor", 28),
-                                                    new Tuple<String, int>("Eyre", 28),
-                                                    new Tuple<String, int>("Dravago", 28),
-                                                    new Tuple<String, int>("Nymm", 28),
-                                                    new Tuple<String, int>("Lharvion", 28),
-                                                    new Tuple<String, int>("Barrakas", 28),
-                                                    new Tuple<String, int>("Rhaan", 28),
-                                                    new Tuple<String, int>("Sypheros", 28),
-                                                    new Tuple<String, int>("Aryth", 28),
-                                                    new Tuple<String, int>("Vult", 28)};
+            this.months = new Month[]{ new Month("Zarantyr", 28),
+                                        new Month("Olarune", 28),
+                                        new Month("Therendor", 28),
+                                        new Month("Eyre", 28),
+                                        new Month("Dravago", 28),
+                                        new Month("Nymm", 28),
+                                        new Month("Lharvion", 28),
+                                        new Month("Barrakas", 28),
+                                        new Month("Rhaan", 28),
+                                        new Month("Sypheros", 28),
+                                        new Month("Aryth", 28),
+                                        new Month("Vult", 28)};
             this.dateFormat = "{0} {1}, {2} YK";
             this.days = new String[] { "Sul", "Mol", "Zol", "Wir", "Zor", "Far", "Sar" };
         }
@@ -380,34 +392,34 @@ namespace DeCamp {
             this.year = 1491;
             this.time = 12 * 60 * 60;
             this.precision = Interval.time;
-            this.months = new Tuple<String, int>[]{ new Tuple<String, int>("Hammer", 30),
-                                                    new Tuple<String, int>("Midwinter", 1),
-                                                    new Tuple<String, int>("Alturiak", 30),
-                                                    new Tuple<String, int>("Ches", 30),
-                                                    new Tuple<String, int>("Tarsakh", 30),
-                                                    new Tuple<String, int>("Greengrass", 1),
-                                                    new Tuple<String, int>("Mirtul", 30),
-                                                    new Tuple<String, int>("Kythorn", 30),
-                                                    new Tuple<String, int>("Flamerule", 30),
-                                                    new Tuple<String, int>("Midsummer", 1),
-                                                    new Tuple<String, int>("Shieldmeet", 0),
-                                                    new Tuple<String, int>("Eleasis", 30),
-                                                    new Tuple<String, int>("Eleint", 30),
-                                                    new Tuple<String, int>("Highharvestide", 1),
-                                                    new Tuple<String, int>("Marpenoth", 30),
-                                                    new Tuple<String, int>("Uktar", 30),
-                                                    new Tuple<String, int>("Feast of the Moon", 1),
-                                                    new Tuple<String, int>("Nightal", 30)};
+            this.months = new Month[]{ new Month("Hammer", 30),
+                                        new Month("Midwinter", 1, true),
+                                        new Month("Alturiak", 30),
+                                        new Month("Ches", 30),
+                                        new Month("Tarsakh", 30),
+                                        new Month("Greengrass", 1, true),
+                                        new Month("Mirtul", 30),
+                                        new Month("Kythorn", 30),
+                                        new Month("Flamerule", 30),
+                                        new Month("Midsummer", 1, true),
+                                        new Month("Shieldmeet", 0, true),
+                                        new Month("Eleasis", 30),
+                                        new Month("Eleint", 30),
+                                        new Month("Highharvestide", 1, true),
+                                        new Month("Marpenoth", 30),
+                                        new Month("Uktar", 30),
+                                        new Month("Feast of the Moon", 1, true),
+                                        new Month("Nightal", 30)};
             this.dateFormat = "{1} {0}, {2} DR";
         }
 
         protected override Tuple<int, int> getDate() {
-            Tuple<String, int> shieldmeet = this.months[10];
+            int oldDays = this.months[10].days;
             if (this.isLeapYear()) {
-                this.months[10] = new Tuple<string, int>("Shieldmeet", 1);
+                this.months[10].days = 1;
             }
             Tuple<int, int> retval = base.getDate();
-            this.months[10] = shieldmeet;
+            this.months[10].days = oldDays;
             return retval;
         }
 
@@ -428,11 +440,11 @@ namespace DeCamp {
             if ((unit == Interval.month) || (unit == Interval.week)) {
                 Tuple<int, int> d = this.getDate();
                 int month = d.Item1 - 1, date = d.Item2;
-                bool wasFestival = (this.months[month].Item2 <= 1), wasMidsummer = false;
+                bool wasFestival = (this.months[month].isVirtual), wasMidsummer = false;
                 if (wasFestival) {
                     // treat festivals as the fist of the following month
                     month += 1;
-                    if (this.months[month].Item2 <= 1) {
+                    if (this.months[month].isVirtual) {
                         wasMidsummer = true;
                         month += 1;
                     }
@@ -461,7 +473,7 @@ namespace DeCamp {
                         month = 0;
                         this.year += 1;
                     }
-                    while (this.months[month].Item2 <= 1) { month += 1; }
+                    while (this.months[month].isVirtual) { month += 1; }
                 }
                 for (; amount < 0; amount++) {
                     month -= 1;
@@ -469,13 +481,13 @@ namespace DeCamp {
                         month = this.months.Length - 1;
                         this.year -= 1;
                     }
-                    while (this.months[month].Item2 <= 1) { month -= 1; }
+                    while (this.months[month].isVirtual) { month -= 1; }
                 }
                 // if we started on a festival and can end on one, do so
-                if ((wasFestival) && (month > 0) && (this.months[month - 1].Item2 <= 1)) {
+                if ((wasFestival) && (month > 0) && (this.months[month - 1].isVirtual)) {
                     month -= 1;
                     // if we started on midsummer and can end on it (i.e. amount was a multiple of 12), do so
-                    if ((wasMidsummer) && (month > 0) && (this.months[month - 1].Item2 <= 1)) { month -= 1; }
+                    if ((wasMidsummer) && (month > 0) && (this.months[month - 1].isVirtual)) { month -= 1; }
                 }
                 this.setDate(month, date);
                 return;
@@ -499,8 +511,8 @@ namespace DeCamp {
         protected override void setDate(int month, int date) {
             while (month > 0) {
                 month -= 1;
-                date += this.months[month].Item2;
-                if ((this.months[month].Item2 == 0) && (this.isLeapYear())) {
+                date += this.months[month].days;
+                if ((this.months[month].days == 0) && (this.isLeapYear())) {
                     date += 1;
                 }
             }
@@ -515,29 +527,29 @@ namespace DeCamp {
             this.year = 2018;
             this.time = 12 * 60 * 60;
             this.precision = Interval.time;
-            this.months = new Tuple<String, int>[]{ new Tuple<String, int>("January", 31),
-                                                    new Tuple<String, int>("February", 28),
-                                                    new Tuple<String, int>("March", 31),
-                                                    new Tuple<String, int>("April", 30),
-                                                    new Tuple<String, int>("May", 31),
-                                                    new Tuple<String, int>("June", 30),
-                                                    new Tuple<String, int>("July", 31),
-                                                    new Tuple<String, int>("August", 31),
-                                                    new Tuple<String, int>("September", 30),
-                                                    new Tuple<String, int>("October", 31),
-                                                    new Tuple<String, int>("November", 30),
-                                                    new Tuple<String, int>("December", 31)};
+            this.months = new Month[]{ new Month("January", 31),
+                                        new Month("February", 28),
+                                        new Month("March", 31),
+                                        new Month("April", 30),
+                                        new Month("May", 31),
+                                        new Month("June", 30),
+                                        new Month("July", 31),
+                                        new Month("August", 31),
+                                        new Month("September", 30),
+                                        new Month("October", 31),
+                                        new Month("November", 30),
+                                        new Month("December", 31)};
             this.dateFormat = "{1} {0}, {2}";
             this.days = new String[] { "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday" };
         }
 
         protected override Tuple<int, int> getDate() {
-            Tuple<String, int> feb = this.months[1];
+            int oldDays = this.months[1].days;
             if (this.isLeapYear()) {
-                this.months[1] = new Tuple<string, int>("February", 29);
+                this.months[1].days = 29;
             }
             Tuple<int, int> retval = base.getDate();
-            this.months[1] = feb;
+            this.months[1].days = oldDays;
             return retval;
         }
 
@@ -633,7 +645,7 @@ namespace DeCamp {
         protected override void setDate(int month, int date) {
             while (month > 0) {
                 month -= 1;
-                date += this.months[month].Item2;
+                date += this.months[month].days;
                 if ((month == 1) && (this.isLeapYear())) {
                     date += 1;
                 }
@@ -644,14 +656,28 @@ namespace DeCamp {
 
 
     static class Calendar {
-        public static Timestamp newTimestamp(String calendar) {
-            switch (calendar) {
-            case "Greyhawk": return new GreyhawkDate();
-            case "Eberron": return new EberronDate();
-            case "Forgotten Realms": return new FRDate();
-            case "Gregorian": return new GregorianDate();
+        private class CalImpl {
+            public Func<Timestamp> timestamp;
+
+            public CalImpl(Func<Timestamp> timestamp) {
+                this.timestamp = timestamp;
             }
-            return new CampaignDate();
+        }
+
+        private static Dictionary<String, CalImpl> calendars = new Dictionary<string, CalImpl>() {
+            { "Greyhawk", new CalImpl( () => new GreyhawkDate() ) },
+            { "Eberron", new CalImpl( () => new EberronDate() ) },
+            { "Forgotten Realms", new CalImpl( () => new FRDate() ) },
+            { "Gregorian", new CalImpl( () => new GregorianDate() ) },
+            { null, new CalImpl( () => new CampaignDate() ) }
+        };
+
+        public static ICollection<String> getCalendars() {
+            return calendars.Keys;
+        }
+
+        public static Timestamp newTimestamp(String calendar) {
+            return (calendars[calendar] ?? calendars[null]).timestamp.Invoke();
         }
     }
 }
