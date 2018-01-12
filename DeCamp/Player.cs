@@ -5,8 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace DeCamp {
-    class Character {
-        public String player;
+    class Player {
         public String name;
     }
 }

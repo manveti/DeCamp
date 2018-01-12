@@ -6,8 +6,11 @@ using System.Threading.Tasks;
 
 namespace DeCamp {
     class Campaign {
-        //gm
-        //party
+        private Dictionary<String, Player> players;
+        private String gm;
+        private String calendar;
+        private String ruleset;
+        private Dictionary<String, Character> party;
         //timeline
         //todo
         //journal
