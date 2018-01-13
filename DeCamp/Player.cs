@@ -7,5 +7,9 @@ using System.Threading.Tasks;
 namespace DeCamp {
     class Player {
         public String name;
+
+        public Player(String name) {
+            this.name = name;
+        }
     }
 }
