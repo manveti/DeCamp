@@ -13,6 +13,8 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 
+using GUIx;
+
 namespace DeCamp {
     /// <summary>
     /// Interaction logic for MainWindow.xaml
@@ -28,10 +30,19 @@ namespace DeCamp {
         public void newCampaign(object sender, RoutedEventArgs e) {
 /////
 //
-            //prompt for existing campaign
-            //prompt for campaign name, calendar, ruleset, etc.
-            this.campaign = new Campaign("Test Campaign", "me", "Greyhawk", "ruleset");
-            this.campaign.adjustTimestamp(1, Timestamp.Interval.hour);
+            //prompt for existing unsaved campaign if necessary
+//
+/////
+            QueryPrompt[] prompts = {
+                new QueryPrompt("Campaign Name:", QueryType.STRING, "New Campaign"),
+                new QueryPrompt("Calendar:", QueryType.LIST, values: Calendar.getCalendars().ToArray()),
+                new QueryPrompt("Rule Set:", QueryType.LIST, values: new String[]{ "D&D 3.5" })
+            };
+            object[] values = SimpleDialog.askCompound("New Campaign", prompts, this);
+            if (values == null) { return; }
+/////
+//
+            this.campaign = new Campaign((String)values[0], "me", (String)values[1], (String)values[2]);
 //
 /////
             this.showCampaign();
