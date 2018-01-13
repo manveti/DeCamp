@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace DeCamp {
-    abstract class Timestamp {
+    abstract class Timestamp : IComparable {
         public enum Interval { year, month, week, day, time, hour, minute, second };
 
         protected Interval precision;
@@ -14,6 +14,7 @@ namespace DeCamp {
         public abstract void adjust(int amount, Interval unit = Interval.second);
         public abstract void set(int value, Interval unit);
         public abstract void set(int year, int month, int week, int day, int time, int hour, int minute, int second);
+        public abstract int CompareTo(object obj);
 
         public Timestamp copy() {
             return (Timestamp)this.MemberwiseClone();
@@ -26,6 +27,36 @@ namespace DeCamp {
         public void set(int year, int month, int week, int day, int time, int hour, int minute, int second, Interval precision) {
             this.setPrecision(precision);
             this.set(year, month, week, day, time, hour, minute, second);
+        }
+
+        public static bool operator <(Timestamp t1, Timestamp t2) {
+            if ((t1 == null) || (t2 == null)) { return false; }
+            return t1.CompareTo(t2) < 0;
+        }
+
+        public static bool operator <=(Timestamp t1, Timestamp t2) {
+            if ((t1 == null) || (t2 == null)) { return false; }
+            return t1.CompareTo(t2) <= 0;
+        }
+
+        public static bool operator ==(Timestamp t1, Timestamp t2) {
+            if (ReferenceEquals(t1, t2)) { return true; }
+            return t1.CompareTo(t2) == 0;
+        }
+
+        public static bool operator !=(Timestamp t1, Timestamp t2) {
+            if (ReferenceEquals(t1, t2)) { return false; }
+            return t1.CompareTo(t2) != 0;
+        }
+
+        public static bool operator >=(Timestamp t1, Timestamp t2) {
+            if ((t1 == null) || (t2 == null)) { return false; }
+            return t1.CompareTo(t2) >= 0;
+        }
+
+        public static bool operator >(Timestamp t1, Timestamp t2) {
+            if ((t1 == null) || (t2 == null)) { return false; }
+            return t1.CompareTo(t2) > 0;
         }
     }
 
@@ -169,6 +200,12 @@ namespace DeCamp {
             this.setTime(hour, minute, second);
         }
 
+        public override int CompareTo(object obj) {
+            if (obj == null) { return 1; }
+            if (this.year != ((SimpleDate)obj).year) { return this.year.CompareTo(((SimpleDate)obj).year); }
+            return this.time.CompareTo(((SimpleDate)obj).time);
+        }
+
         protected virtual String getWeekday() {
             return null;
         }
@@ -283,6 +320,12 @@ namespace DeCamp {
             if ((year != 0) || (month != 0)) { day += year * 365 + month * 30; }
             else if (week != 0) { day += week * 7; }
             base.set(0, 0, 0, day, time, hour, minute, second);
+        }
+
+        public override int CompareTo(object obj) {
+            if (obj == null) { return 1; }
+            if (this.date != ((CampaignDate)obj).date) { return this.year.CompareTo(((CampaignDate)obj).date); }
+            return ((SimpleDate)this).CompareTo((SimpleDate)((CampaignDate)obj));
         }
 
         protected override int getDayOfYear() {
