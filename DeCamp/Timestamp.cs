@@ -13,6 +13,7 @@ namespace DeCamp {
         public abstract String toString(bool date = true, bool time = false);
         public abstract void adjust(int amount, Interval unit = Interval.second);
         public abstract void set(int value, Interval unit);
+        public abstract void set(int year, int month, int week, int day, int time, int hour, int minute, int second);
 
         public Timestamp copy() {
             return (Timestamp)this.MemberwiseClone();
@@ -20,6 +21,11 @@ namespace DeCamp {
 
         public void setPrecision(Interval p) {
             this.precision = p;
+        }
+
+        public void set(int year, int month, int week, int day, int time, int hour, int minute, int second, Interval precision) {
+            this.setPrecision(precision);
+            this.set(year, month, week, day, time, hour, minute, second);
         }
     }
 
@@ -155,6 +161,12 @@ namespace DeCamp {
             if (this.precision < unit) { this.precision = unit; }
         }
 
+        public override void set(int year, int month, int week, int day, int time, int hour, int minute, int second) {
+            this.year = year;
+            this.setDate(month, day);
+            this.setTime(hour, minute, second);
+        }
+
         protected virtual String getWeekday() {
             return null;
         }
@@ -263,6 +275,12 @@ namespace DeCamp {
                 this.date -= 1;
                 this.time += dayLength;
             }
+        }
+
+        public override void set(int year, int month, int week, int day, int time, int hour, int minute, int second) {
+            if ((year != 0) || (month != 0)) { day += year * 365 + month * 30; }
+            else if (week != 0) { day += week * 7; }
+            base.set(0, 0, 0, day, time, hour, minute, second);
         }
 
         protected override int getDayOfYear() {
