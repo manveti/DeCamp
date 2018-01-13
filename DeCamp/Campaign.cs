@@ -16,6 +16,15 @@ namespace DeCamp {
         //todo
         //journal
 
+        public Campaign(String gm, String calendar, String ruleset) {
+            this.players = new Dictionary<string, Player>();
+            this.gm = gm;
+            this.calendar = calendar;
+            this.ruleset = ruleset;
+            this.party = new Dictionary<string, Character>();
+            this.now = Calendar.newTimestamp(calendar);
+        }
+
         //constructor
         //...
 

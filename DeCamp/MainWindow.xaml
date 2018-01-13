@@ -5,8 +5,64 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:DeCamp"
         mc:Ignorable="d"
-        Title="Aide de Campaign" Width="525" Height="350">
+        Title="Aide de Campaign" Width="800" Height="600">
     <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="1*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="3*"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="3*"/>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="1*"/>
+        </Grid.ColumnDefinitions>
+
+        <Menu Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3">
+            <MenuItem Header="_File"></MenuItem>
+        </Menu>
+
+        <GroupBox Grid.Row="1" Grid.Column="0" Grid.RowSpan="3" Header="Timeline">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="1*"/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="1*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <Label Grid.Row="0" Grid.Column="0" Content="Current Campaign Time:"/>
+                <Label Grid.Row="0" Grid.Column="1" Name="timestampBox"/>
+                <Button Grid.Row="0" Grid.Column="2" Content="-Y" ToolTip="Rewind 1 Year"/>
+                <Button Grid.Row="0" Grid.Column="3" Content="-M" ToolTip="Rewind 1 Month"/>
+                <Button Grid.Row="0" Grid.Column="4" Content="-D" ToolTip="Rewind 1 Day"/>
+                <Button Grid.Row="0" Grid.Column="5" Content="-H" ToolTip="Rewind 1 Hour"/>
+                <Button Grid.Row="0" Grid.Column="6" Margin="3,0,3,0" Content="Set"/>
+                <Button Grid.Row="0" Grid.Column="7" Content="+H" ToolTip="Advance 1 Hour"/>
+                <Button Grid.Row="0" Grid.Column="8" Content="+D" ToolTip="Advance 1 Day"/>
+                <Button Grid.Row="0" Grid.Column="9" Content="+M" ToolTip="Advance 1 Month"/>
+                <Button Grid.Row="0" Grid.Column="10" Content="+Y" ToolTip="Advance 1 Year"/>
+            </Grid>
+        </GroupBox>
+
+        <GridSplitter Grid.Row="1" Grid.Column="1" Grid.RowSpan="3" HorizontalAlignment="Center" Width="2"/>
+
+        <GroupBox Grid.Row="1" Grid.Column="2" Header="Party"></GroupBox>
         
+        <GridSplitter Grid.Row="2" Grid.Column="2" HorizontalAlignment="Stretch" VerticalAlignment="Center" Height="2"/>
+
+        <GroupBox Grid.Row="3" Grid.Column="2" Header="Journal"></GroupBox>
     </Grid>
 </Window>

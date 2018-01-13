@@ -55,6 +55,7 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="DnD35.cs" />
+    <Compile Include="Player.cs" />
     <Compile Include="Ruleset.cs" />
     <Compile Include="Timestamp.cs" />
     <Page Include="MainWindow.xaml">

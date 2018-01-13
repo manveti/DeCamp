@@ -101,15 +101,17 @@ namespace DeCamp {
             }
             // strip off extra years at this point to avoid overflow when we convert to seconds; we'll still need to normalize later, though
             int yearLength = this.getYearLength();
-            while (amount >= yearLength) {
-                this.year += 1;
-                amount -= yearLength;
+            if (unit <= Interval.day) {
+                while (amount >= yearLength) {
+                    this.year += 1;
+                    amount -= yearLength;
+                }
+                while (amount <= -yearLength) {
+                    this.year -= 1;
+                    amount += yearLength;
+                }
+                amount *= 24; // convert days to hours
             }
-            while (amount <= -yearLength) {
-                this.year -= 1;
-                amount += yearLength;
-            }
-            if (unit <= Interval.day) { amount *= 24; } // convert days to hours
             if (unit <= Interval.hour) { amount *= 60; } // convert hours to minutes
             if (unit <= Interval.minute) { amount *= 60; } // convert minutes to seconds
             this.time += amount;
@@ -674,6 +676,8 @@ namespace DeCamp {
 
 
     static class Calendar {
+        private const String defaultCalendar = "Campaign Date";
+
         private class CalImpl {
             public Func<Timestamp> timestamp;
 
@@ -687,7 +691,7 @@ namespace DeCamp {
             { "Eberron", new CalImpl( () => new EberronDate() ) },
             { "Forgotten Realms", new CalImpl( () => new FRDate() ) },
             { "Gregorian", new CalImpl( () => new GregorianDate() ) },
-            { null, new CalImpl( () => new CampaignDate() ) }
+            { defaultCalendar, new CalImpl( () => new CampaignDate() ) }
         };
 
         public static ICollection<String> getCalendars() {
@@ -695,7 +699,7 @@ namespace DeCamp {
         }
 
         public static Timestamp newTimestamp(String calendar) {
-            return (calendars[calendar] ?? calendars[null]).timestamp.Invoke();
+            return (calendars.ContainsKey(calendar) ? calendars[calendar] : calendars[defaultCalendar]).timestamp.Invoke();
         }
     }
 }
