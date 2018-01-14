@@ -245,7 +245,7 @@ namespace DeCamp {
 
     class JulianCalendar : DayCalendar {
         public override Timestamp defaultTimestamp() {
-            return this.newTimestamp(2458119.5m * this.dayHours * this.hourMins * this.minuteSecs, Interval.time);
+            return this.newTimestamp(2458119m * this.dayHours * this.hourMins * this.minuteSecs, Interval.time);
         }
 
         public override String timestampToString(Timestamp t, bool date = true, bool time = false) {
@@ -507,7 +507,7 @@ namespace DeCamp {
 
         protected override Date getDate(Timestamp t) {
             Date d = base.getDate(t);
-            if (d.year > 0) {
+            if (d.year >= 0) {
                 d.year += 1; // there's no year 0 in common reckoning, so increment non-negative years
             }
             return d;
@@ -790,14 +790,8 @@ namespace DeCamp {
         }
     }
 
-#if false
-    class GregorianDate : SimpleDate {
-        String[] days;
-
-        public GregorianDate() {
-            this.year = 2018;
-            this.time = 12 * 60 * 60;
-            this.precision = Interval.time;
+    class GregorianCalendar : LeapCalendar {
+        public GregorianCalendar() {
             this.months = new Month[]{ new Month("January", 31),
                                         new Month("February", 28),
                                         new Month("March", 31),
@@ -810,121 +804,33 @@ namespace DeCamp {
                                         new Month("October", 31),
                                         new Month("November", 30),
                                         new Month("December", 31)};
-            this.dateFormat = "{1} {0}, {2}";
             this.days = new String[] { "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday" };
+            this.dateFormat = "{1} {0}, {2}";
+            this.leapMonth = 2;
+            this.cycleYears = 400;
+            this.cycleLeapDays = 97;
         }
 
-        protected override Tuple<int, int> getDate() {
-            int oldDays = this.months[1].days;
-            if (this.isLeapYear()) {
-                this.months[1].days = 29;
-            }
-            Tuple<int, int> retval = base.getDate();
-            this.months[1].days = oldDays;
-            return retval;
+        public override Timestamp defaultTimestamp() {
+            return this.newTimestamp(2018, 1, 0, 1, 12, 0, 0, Interval.time);
         }
 
-        protected override int getYearLength() {
-            return 365 + (this.isLeapYear() ? 1 : 0);
+        protected override string getWeekday(Timestamp t) {
+            int day = Decimal.ToInt32(Math.Floor(t.value / this.getIntervalLength(t.value, Interval.day) - 1) % this.days.Length);
+            if (day < 0) { day += this.days.Length; }
+            return this.days[day];
         }
 
-        protected bool isLeapYear() {
-            if (this.year < 8) {
-                return ((this.year >= -45) && (this.year <= -9) && (this.year % 3 == 0));
-            }
-            if ((this.year % 4) != 0) { return false; }
-            if ((this.year % 400) == 0) { return true; }
-            return (this.year % 100) != 0;
-        }
-
-        protected override String getWeekday() {
-            int year = this.year, day = this.getDayOfYear() % 7;
-            if (year < 8) {
-/////
-//
-                //fix up wonky leap years and deal with the fact that there's no 0 CE
-//
-/////
-            }
-            while (year < 2001) { year += 400; } // 365 days per non-leap year means day increases by 1 (365 % 7) per year, plus leap days
-            while (year >= 2401) { year -= 400; } // 97 leap days per 400 years, so day increases by 497 days (=> 0 days) every 400 years
-            // now that year is between 2001 and 2400, we'll get a little more involved to translate it to 2001
-            while (year > 2100) {
-                year -= 100; // 24 leap years for every 100 years between 2001 and 2400...
-                day = (day + 124) % 7; // ...so day increases by 124 (=> 5) days every 100 years
-            }
-            // year is now between 2001 and 2100
-            while (year > 2004) {
-                year -= 4; // 1 leap year every 4 years between 2001 and 2100...
-                day = (day + 5) % 7; // ...so day increases by 5 days every 4 years
-            }
-            // year is now between 2001 and 2004
-            while (year > 2001) {
-                year -= 1; // no leap years between 2001 and 2004...
-                day = (day + 1) % 7; // ...so day increases by 1 day every year
-            }
-            return this.days[day]; // Jan 1, 2001 was a Monday, so day 1 is this.days[1]
-        }
-
-        public override void adjust(int amount, Interval unit = Interval.second) {
-            if (unit == Interval.time) { return; } // can't add time of day
-            if (unit == Interval.year) {
-                // deal with the fact that there's no year 0 in common era
-                if ((this.year < 0) && (this.year + amount >= 0)) { this.year += 1; }
-                if ((this.year > 0) && (this.year + amount <= 0)) { this.year -= 1; }
-                this.year += amount;
-                return;
-            }
-            if (unit == Interval.month) {
-                Tuple<int, int> d = this.getDate();
-                int month = d.Item1 - 1, date = d.Item2;
-                // adjust month by amount, adjusting this.year as necessary along the way
-                for (; amount > 0; amount--) {
-                    month += 1;
-                    if (month >= this.months.Length) {
-                        month = 0;
-                        this.year += 1;
-                    }
-                }
-                for (; amount < 0; amount++) {
-                    month -= 1;
-                    if (month < 0) {
-                        month = this.months.Length - 1;
-                        this.year -= 1;
-                    }
-                }
-                this.setDate(month, date);
-                return;
-            }
-            // we're not falling through from longer spans here, so we won't worry about overflow
-            if (unit <= Interval.week) { amount *= 7; } // convert weeks to days
-            if (unit <= Interval.day) { amount *= 24; } // convert days to hours
-            if (unit <= Interval.hour) { amount *= 60; } // convert hours to minutes
-            if (unit <= Interval.minute) { amount *= 60; } // convert minutes to seconds
-            this.time += amount;
-            // normalize
-            while (this.time >= this.getYearLength() * this.getDayLength()) {
-                this.time -= this.getYearLength() * this.getDayLength();
-                this.year += 1;
-            }
-            while (this.time < 0) {
-                this.year -= 1;
-                this.time += this.getYearLength() * this.getDayLength();
-            }
-        }
-
-        protected override void setDate(int month, int date) {
-            while (month > 0) {
-                month -= 1;
-                date += this.months[month].days;
-                if ((month == 1) && (this.isLeapYear())) {
-                    date += 1;
-                }
-            }
-            this.setDayOfYear(date);
+        public override bool isLeapYear(long year) {
+            // for historical accuracy, we'd need this (which would make the cycle invalid for years between 45 BCE and 7 CE)
+            //if (year < 8) {
+            //    return (year >= -45) && (year <= -9) && (year % 3 == 0);
+            //}
+            if ((year % 4) != 0) { return false; }
+            if ((year % 400) == 0) { return true; }
+            return (year % 100) != 0;
         }
     }
-#endif
 
 
     static class Calendars {
@@ -942,7 +848,7 @@ namespace DeCamp {
             { "Greyhawk", new CalImpl( () => new GreyhawkCalendar() ) },
             { "Eberron", new CalImpl( () => new EberronCalendar() ) },
             { "Forgotten Realms", new CalImpl( () => new FRCalendar() ) },
-            //{ "Gregorian", new CalImpl( () => new GregorianCalendar() ) },
+            { "Gregorian", new CalImpl( () => new GregorianCalendar() ) },
             { "Julian", new CalImpl( () => new JulianCalendar() ) },
             { defaultCalendar, new CalImpl( () => new CampaignCalendar() ) }
         };
