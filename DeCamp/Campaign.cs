@@ -9,11 +9,11 @@ namespace DeCamp {
         public String name;
         private Dictionary<String, Player> players;
         private String gm;
-        private readonly String calendar;
+        private readonly Calendar calendar;
         private readonly String ruleset;
         private Dictionary<String, Character> party;
         private Timestamp now;
-        //timeline
+        private SortedDictionary<Timestamp, Event> timeline;
         //todo
         //journal
 
@@ -21,10 +21,10 @@ namespace DeCamp {
             this.name = name;
             this.players = new Dictionary<string, Player>();
             this.gm = this.addPlayer(gm);
-            this.calendar = calendar;
+            this.calendar = Calendars.newCalendar(calendar);
             this.ruleset = ruleset;
             this.party = new Dictionary<string, Character>();
-            this.now = Calendar.newTimestamp(calendar);
+            this.now = this.calendar.defaultTimestamp();
         }
 
         public ICollection<String> getPlayers() {
@@ -56,16 +56,16 @@ namespace DeCamp {
         //get party (change through events)
 
         public Timestamp getTimestamp() {
-            return this.now.copy();
+            return this.now;
         }
 
-        public void adjustTimestamp(int amount, Timestamp.Interval unit = Timestamp.Interval.second) {
-            this.now.adjust(amount, unit);
+        public void adjustTimestamp(int amount, Calendar.Interval unit = Calendar.Interval.second) {
+            this.now = this.now.add(amount, unit);
             this.handleTimeChange();
         }
 
-        public void setTimestamp(int year, int month, int week, int day, int time, int hour, int minute, int second, Timestamp.Interval precision) {
-            this.now.set(year, month, week, day, time, hour, minute, second, precision);
+        public void setTimestamp(long year, uint month, uint week, uint day, uint hour, uint minute, uint second, Calendar.Interval precision) {
+            this.now = this.calendar.newTimestamp(year, month, week, day, hour, minute, second, precision);
             this.handleTimeChange();
         }
 
