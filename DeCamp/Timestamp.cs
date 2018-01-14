@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Controls;
+
+using GUIx;
 
 namespace DeCamp {
     class TimeSpan {
@@ -20,7 +21,7 @@ namespace DeCamp {
     }
 
     class Timestamp : IComparable {
-        protected readonly Calendar calendar;
+        public readonly Calendar calendar;
         public readonly Decimal value;
         public readonly Calendar.Interval precision;
 
@@ -267,10 +268,10 @@ namespace DeCamp {
     }
 
     abstract class SimpleCalendar : Calendar {
-        protected class Month {
-            public String name;
-            public uint days;
-            public bool isVirtual;
+        public class Month {
+            public readonly String name;
+            public readonly uint days;
+            public readonly bool isVirtual;
 
             public Month(String name, uint days, bool isVirtual = false) {
                 this.name = name;
@@ -279,7 +280,7 @@ namespace DeCamp {
             }
         }
 
-        protected class Date {
+        public class Date {
             public long year;
             public uint month;
             public uint day;
@@ -291,7 +292,7 @@ namespace DeCamp {
             }
         }
 
-        protected Month[] months;
+        public Month[] months;
         protected String[] days;
         protected String dateFormat;
 
@@ -306,16 +307,16 @@ namespace DeCamp {
                 month -= (uint)(this.months.Length);
             }
             if (precision >= Interval.year) { value += year * this.getIntervalLength(value, Interval.year); }
-            if (precision >= Interval.month) {
+            if ((precision >= Interval.month) && (month > 0)) {
                 for (month -= 1; month > 0; month -= 1) {
-                    value += this.months[month].days * dayLength;
+                    value += this.months[month - 1].days * dayLength;
                 }
             }
             if (precision == Interval.week) { value += week * this.getIntervalLength(value, Interval.week); }
             if (precision >= Interval.day) { value += (day - 1) * dayLength; }
             if (precision >= Interval.time) { value += hour * this.getIntervalLength(value, Interval.hour); }
-            if (precision >= Interval.minute) { value += hour * this.getIntervalLength(value, Interval.minute); }
-            if (precision >= Interval.second) { value += hour * this.getIntervalLength(value, Interval.second); }
+            if (precision >= Interval.minute) { value += minute * this.getIntervalLength(value, Interval.minute); }
+            if (precision >= Interval.second) { value += second * this.getIntervalLength(value, Interval.second); }
             return this.newTimestamp(value, precision);
         }
 
@@ -376,11 +377,11 @@ namespace DeCamp {
             return this.newTimestamp(value, t.precision);
         }
 
-        protected virtual String getWeekday(Timestamp t) {
+        public virtual String getWeekday(Timestamp t) {
             return null;
         }
 
-        protected virtual Date getDate(Timestamp t) {
+        public virtual Date getDate(Timestamp t) {
             Decimal value = t.value;
             Decimal yearLength = this.getIntervalLength(t.value, Interval.year);
             Decimal dayLength = this.getIntervalLength(t.value, Interval.day);
@@ -396,14 +397,14 @@ namespace DeCamp {
             return new Date(year, month + 1, day + 1);
         }
 
-        protected virtual int getTime(Timestamp t) {
+        public virtual int getTime(Timestamp t) {
             Decimal dayLength = this.getIntervalLength(t.value, Interval.day);
             Decimal retval = t.value % dayLength;
             if (retval < 0) { retval += dayLength; }
             return Decimal.ToInt32(retval);
         }
 
-        protected virtual Decimal getIntervalLength(Decimal value, Interval unit, bool forwards = true) {
+        public virtual Decimal getIntervalLength(Decimal value, Interval unit, bool forwards = true) {
             Decimal l = 0;
             switch (unit) {
             case Interval.year:
@@ -499,13 +500,13 @@ namespace DeCamp {
             return base.add(t, amount, unit);
         }
 
-        protected override String getWeekday(Timestamp t) {
+        public override String getWeekday(Timestamp t) {
             Date d = this.getDate(t);
             if (this.months[d.month - 1].isVirtual) { return null; }
             return this.days[(d.day - 1) % this.days.Length];
         }
 
-        protected override Date getDate(Timestamp t) {
+        public override Date getDate(Timestamp t) {
             Date d = base.getDate(t);
             if (d.year >= 0) {
                 d.year += 1; // there's no year 0 in common reckoning, so increment non-negative years
@@ -536,12 +537,12 @@ namespace DeCamp {
             return this.newTimestamp(998, 1, 0, 1, 12, 0, 0, Interval.time);
         }
 
-        protected override String getWeekday(Timestamp t) {
+        public override String getWeekday(Timestamp t) {
             Date d = this.getDate(t);
             return this.days[(d.day - 1) % this.days.Length];
         }
 
-        protected override Decimal getIntervalLength(Decimal value, Interval unit, bool forwards = true) {
+        public override Decimal getIntervalLength(Decimal value, Interval unit, bool forwards = true) {
             if (unit == Interval.month) { return 28 * this.getIntervalLength(value, Interval.day, forwards); }
             return base.getIntervalLength(value, unit, forwards);
         }
@@ -601,8 +602,8 @@ namespace DeCamp {
             if (precision == Interval.week) { value += week * this.getIntervalLength(value, Interval.week); }
             if (precision >= Interval.day) { value += (day - 1) * dayLength; }
             if (precision >= Interval.time) { value += hour * this.getIntervalLength(value, Interval.hour); }
-            if (precision >= Interval.minute) { value += hour * this.getIntervalLength(value, Interval.minute); }
-            if (precision >= Interval.second) { value += hour * this.getIntervalLength(value, Interval.second); }
+            if (precision >= Interval.minute) { value += minute * this.getIntervalLength(value, Interval.minute); }
+            if (precision >= Interval.second) { value += second * this.getIntervalLength(value, Interval.second); }
             return this.newTimestamp(value, precision);
         }
 
@@ -672,7 +673,7 @@ namespace DeCamp {
             return days * this.getIntervalLength(0, Interval.day);
         }
 
-        protected override Date getDate(Timestamp t) {
+        public override Date getDate(Timestamp t) {
             Decimal value = t.value;
             long year = 0;
             if (this.cycleYears > 0) {
@@ -702,7 +703,7 @@ namespace DeCamp {
             return new Date(year, month + 1, day + 1);
         }
 
-        protected override Decimal getIntervalLength(Decimal value, Interval unit, bool forwards = true) {
+        public override Decimal getIntervalLength(Decimal value, Interval unit, bool forwards = true) {
             if (unit <= Interval.month) {
                 Date d = this.getDate(this.newTimestamp(value));
                 uint days;
@@ -757,7 +758,7 @@ namespace DeCamp {
             return (year % 4) == 0;
         }
 
-        protected override Decimal getIntervalLength(Decimal value, Interval unit, bool forwards = true) {
+        public override Decimal getIntervalLength(Decimal value, Interval unit, bool forwards = true) {
             Date d;
             Decimal retval;
             if (unit == Interval.month) {
@@ -815,7 +816,7 @@ namespace DeCamp {
             return this.newTimestamp(2018, 1, 0, 1, 12, 0, 0, Interval.time);
         }
 
-        protected override string getWeekday(Timestamp t) {
+        public override string getWeekday(Timestamp t) {
             int day = Decimal.ToInt32(Math.Floor(t.value / this.getIntervalLength(t.value, Interval.day) - 1) % this.days.Length);
             if (day < 0) { day += this.days.Length; }
             return this.days[day];
@@ -833,32 +834,430 @@ namespace DeCamp {
     }
 
 
+    abstract class DatePickerDialog : Window {
+        protected Calendar calendar;
+        protected Grid dateGrid, precisionGrid;
+        protected ComboBox precisionBox;
+        public bool valid;
+
+        public DatePickerDialog(String title, Timestamp t) {
+            this.calendar = t.calendar;
+            this.valid = false;
+            this.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+            this.SizeToContent = SizeToContent.WidthAndHeight;
+            this.Title = title;
+            Grid g = new Grid();
+            g.ColumnDefinitions.Add(new ColumnDefinition());
+            RowDefinition rd = new RowDefinition();
+            rd.Height = GridLength.Auto;
+            g.RowDefinitions.Add(rd);
+            this.dateGrid = new Grid();
+            this.populateDateGrid();
+            Grid.SetRow(this.dateGrid, 0);
+            Grid.SetColumn(this.dateGrid, 0);
+            g.Children.Add(this.dateGrid);
+            rd = new RowDefinition();
+            rd.Height = GridLength.Auto;
+            g.RowDefinitions.Add(rd);
+            this.precisionGrid = new Grid();
+            this.populatePrecisionGrid();
+            Grid.SetRow(this.precisionGrid, 1);
+            Grid.SetColumn(this.precisionGrid, 0);
+            g.Children.Add(this.precisionGrid);
+            rd = new RowDefinition();
+            rd.Height = GridLength.Auto;
+            g.RowDefinitions.Add(rd);
+            Grid butGrid = new Grid();
+            butGrid.HorizontalAlignment = HorizontalAlignment.Right;
+            butGrid.ColumnDefinitions.Add(new ColumnDefinition());
+            butGrid.ColumnDefinitions.Add(new ColumnDefinition());
+            butGrid.RowDefinitions.Add(new RowDefinition());
+            Button okBut = new Button();
+            okBut.Content = "OK";
+            okBut.Click += this.doOk;
+            Grid.SetRow(okBut, 0);
+            Grid.SetColumn(okBut, 0);
+            butGrid.Children.Add(okBut);
+            Button cancelBut = new Button();
+            cancelBut.Content = "Cancel";
+            cancelBut.Click += this.doCancel;
+            Grid.SetRow(cancelBut, 0);
+            Grid.SetColumn(cancelBut, 1);
+            butGrid.Children.Add(cancelBut);
+            Grid.SetRow(butGrid, 2);
+            Grid.SetColumn(butGrid, 0);
+            g.Children.Add(butGrid);
+            this.setDefaultValues(t);
+            this.Content = g;
+        }
+
+        protected abstract void populateDateGrid();
+
+        protected virtual void populatePrecisionGrid() {
+            ColumnDefinition cd = new ColumnDefinition();
+            cd.Width = GridLength.Auto;
+            this.precisionGrid.ColumnDefinitions.Add(cd);
+            this.precisionGrid.ColumnDefinitions.Add(new ColumnDefinition());
+            RowDefinition rd = new RowDefinition();
+            rd.Height = GridLength.Auto;
+            this.precisionGrid.RowDefinitions.Add(rd);
+            Label promptBox = new Label();
+            promptBox.Content = "Precision:";
+            Grid.SetRow(promptBox, 0);
+            Grid.SetColumn(promptBox, 0);
+            this.precisionGrid.Children.Add(promptBox);
+            this.precisionBox = new ComboBox();
+            this.precisionBox.Items.Add("Year");
+            this.precisionBox.Items.Add("Month");
+            this.precisionBox.Items.Add("Week");
+            this.precisionBox.Items.Add("Day");
+            this.precisionBox.Items.Add("Time");
+            this.precisionBox.Items.Add("Hour");
+            this.precisionBox.Items.Add("Minute");
+            this.precisionBox.Items.Add("Second");
+            Grid.SetRow(this.precisionBox, 0);
+            Grid.SetColumn(this.precisionBox, 1);
+            this.precisionGrid.Children.Add(this.precisionBox);
+        }
+
+        protected virtual void setDefaultValues(Timestamp t) {
+            this.precisionBox.SelectedIndex = (int)(t.precision);
+        }
+
+        private void doOk(object sender, RoutedEventArgs e) {
+            this.valid = true;
+            this.Close();
+        }
+
+        private void doCancel(object sender, RoutedEventArgs e) {
+            this.Close();
+        }
+
+        public abstract Timestamp getTimestamp();
+
+        protected virtual Calendar.Interval getPrecision() {
+            return (Calendar.Interval)(this.precisionBox.SelectedIndex);
+        }
+    }
+
+    class DayPickerDialog : DatePickerDialog {
+        protected SpinBox dateBox;
+
+        public DayPickerDialog(String title, Timestamp t) : base(title, t) { }
+
+        protected override void populateDateGrid() {
+            ColumnDefinition cd = new ColumnDefinition();
+            cd.Width = GridLength.Auto;
+            this.dateGrid.ColumnDefinitions.Add(cd);
+            this.dateGrid.ColumnDefinitions.Add(new ColumnDefinition());
+            RowDefinition rd = new RowDefinition();
+            rd.Height = GridLength.Auto;
+            this.dateGrid.RowDefinitions.Add(rd);
+            Label promptBox = new Label();
+            promptBox.Content = "Date:";
+            Grid.SetRow(promptBox, 0);
+            Grid.SetColumn(promptBox, 0);
+            this.dateGrid.Children.Add(promptBox);
+            this.dateBox = new SpinBox();
+            Grid.SetRow(this.dateBox, 0);
+            Grid.SetColumn(this.dateBox, 1);
+            this.dateGrid.Children.Add(this.dateBox);
+        }
+
+        protected override void setDefaultValues(Timestamp t) {
+            base.setDefaultValues(t);
+            this.dateBox.Value = (double)(t.value);
+        }
+
+        public override Timestamp getTimestamp() {
+            return this.calendar.newTimestamp((Decimal)(this.dateBox.Value), this.getPrecision());
+        }
+    }
+
+    class JulianDatePickerDialog : DayPickerDialog {
+        public JulianDatePickerDialog(String title, Timestamp t) : base(title, t) { }
+
+        protected override void setDefaultValues(Timestamp t) {
+            base.setDefaultValues(t);
+            this.dateBox.Value = (double)(t.value / (24 * 60 * 60));
+        }
+
+        public override Timestamp getTimestamp() {
+            return this.calendar.newTimestamp(((Decimal)(this.dateBox.Value)) * 24 * 60 * 60, this.getPrecision());
+        }
+    }
+
+    class DayTimePickerDialog : DayPickerDialog {
+        protected ComboBox hourBox, minBox, secBox;
+
+        public DayTimePickerDialog(String title, Timestamp t) : base(title, t) { }
+
+        protected override void populateDateGrid() {
+            base.populateDateGrid();
+            RowDefinition rd = new RowDefinition();
+            rd.Height = GridLength.Auto;
+            this.dateGrid.RowDefinitions.Add(rd);
+            Label promptBox = new Label();
+            promptBox.Content = "Time:";
+            Grid.SetRow(promptBox, 1);
+            Grid.SetColumn(promptBox, 0);
+            this.dateGrid.Children.Add(promptBox);
+            Grid timeGrid = new Grid();
+            ColumnDefinition cd = new ColumnDefinition();
+            cd.Width = GridLength.Auto;
+            timeGrid.ColumnDefinitions.Add(cd);
+            cd = new ColumnDefinition();
+            cd.Width = GridLength.Auto;
+            timeGrid.ColumnDefinitions.Add(cd);
+            cd = new ColumnDefinition();
+            cd.Width = GridLength.Auto;
+            timeGrid.ColumnDefinitions.Add(cd);
+            cd = new ColumnDefinition();
+            cd.Width = GridLength.Auto;
+            timeGrid.ColumnDefinitions.Add(cd);
+            cd = new ColumnDefinition();
+            cd.Width = GridLength.Auto;
+            timeGrid.ColumnDefinitions.Add(cd);
+            rd = new RowDefinition();
+            rd.Height = GridLength.Auto;
+            timeGrid.RowDefinitions.Add(rd);
+            this.hourBox = new ComboBox();
+            for (int i = 0; i < 24; i++) { this.hourBox.Items.Add(String.Format("{0:D2}", i)); }
+            Grid.SetRow(this.hourBox, 0);
+            Grid.SetColumn(this.hourBox, 0);
+            timeGrid.Children.Add(this.hourBox);
+            Label l = new Label();
+            l.Content = ":";
+            Grid.SetRow(l, 0);
+            Grid.SetColumn(l, 1);
+            timeGrid.Children.Add(l);
+            this.minBox = new ComboBox();
+            for (int i = 0; i < 60; i++) { this.minBox.Items.Add(String.Format("{0:D2}", i)); }
+            Grid.SetRow(this.minBox, 0);
+            Grid.SetColumn(this.minBox, 2);
+            timeGrid.Children.Add(this.minBox);
+            l = new Label();
+            l.Content = ":";
+            Grid.SetRow(l, 0);
+            Grid.SetColumn(l, 3);
+            timeGrid.Children.Add(l);
+            this.secBox = new ComboBox();
+            for (int i = 0; i < 60; i++) { this.secBox.Items.Add(String.Format("{0:D2}", i)); }
+            Grid.SetRow(this.secBox, 0);
+            Grid.SetColumn(this.secBox, 4);
+            timeGrid.Children.Add(this.secBox);
+            Grid.SetRow(timeGrid, 1);
+            Grid.SetColumn(timeGrid, 1);
+            this.dateGrid.Children.Add(timeGrid);
+        }
+
+        protected override void setDefaultValues(Timestamp t) {
+            base.setDefaultValues(t);
+            Decimal value = t.value; // value is in seconds
+            this.secBox.SelectedIndex = Decimal.ToInt32(((value % 60) + 60) % 60); // double-modulus because c#'s "%n" can yield -(n-1) to (n-1)
+            value = Math.Floor(value / 60); // value now in minutes
+            this.minBox.SelectedIndex = Decimal.ToInt32(((value % 60) + 60) % 60);
+            value = Math.Floor(value / 60); // value now in hours
+            this.hourBox.SelectedIndex = Decimal.ToInt32(((value % 24) + 24) % 24);
+            value = Math.Floor(value / 24); // value now in days
+            this.dateBox.Value = (double)(value);
+        }
+
+        public override Timestamp getTimestamp() {
+            Decimal value = (Decimal)(this.dateBox.Value) * 24; // value is in hours
+            value += this.hourBox.SelectedIndex;
+            value *= 60; // value now in minutes
+            value += this.minBox.SelectedIndex;
+            value *= 60; // value now in seconds
+            value += this.secBox.SelectedIndex;
+            return this.calendar.newTimestamp(value, this.getPrecision());
+        }
+    }
+
+    class SimpleDatePickerDialog : DatePickerDialog {
+        public enum DateOrder { DMY, MDY, YMD };
+
+        DateOrder order;
+        protected SpinBox yearBox;
+        protected ComboBox monthBox, dayBox, hourBox, minBox, secBox;
+
+        public SimpleDatePickerDialog(String title, Timestamp t, DateOrder order = DateOrder.DMY) : base(title, t) {
+            this.order = order;
+        }
+
+        protected override void populateDateGrid() {
+            ColumnDefinition cd = new ColumnDefinition();
+            cd.Width = GridLength.Auto;
+            this.dateGrid.ColumnDefinitions.Add(cd);
+            this.dateGrid.ColumnDefinitions.Add(new ColumnDefinition());
+            RowDefinition rd = new RowDefinition();
+            rd.Height = GridLength.Auto;
+            this.dateGrid.RowDefinitions.Add(rd);
+            Label l = new Label();
+            l.Content = "Date:";
+            Grid.SetRow(l, 0);
+            Grid.SetColumn(l, 0);
+            this.dateGrid.Children.Add(l);
+            Grid g = new Grid();
+            cd = new ColumnDefinition();
+            cd.Width = GridLength.Auto;
+            g.ColumnDefinitions.Add(cd);
+            cd = new ColumnDefinition();
+            cd.Width = GridLength.Auto;
+            g.ColumnDefinitions.Add(cd);
+            cd = new ColumnDefinition();
+            cd.Width = GridLength.Auto;
+            g.ColumnDefinitions.Add(cd);
+            rd = new RowDefinition();
+            rd.Height = GridLength.Auto;
+            g.RowDefinitions.Add(rd);
+            this.yearBox = new SpinBox();
+            Grid.SetRow(this.yearBox, 0);
+            Grid.SetColumn(this.yearBox, (this.order == DateOrder.YMD ? 0 : 2));
+            g.Children.Add(this.yearBox);
+            this.monthBox = new ComboBox();
+            SimpleCalendar cal = (SimpleCalendar)(this.calendar);
+            int maxDays = 0;
+            for (int i = 0; i < cal.months.Length; i++) {
+                this.monthBox.Items.Add(cal.months[i].name);
+                if (cal.months[i].days > maxDays) { maxDays = (int)(cal.months[i].days); }
+            }
+            Grid.SetRow(this.monthBox, 0);
+            Grid.SetColumn(this.monthBox, (this.order == DateOrder.MDY ? 0 : 1));
+            g.Children.Add(this.monthBox);
+            this.dayBox = new ComboBox();
+            for (int i = 0; i < maxDays; i++) {
+                this.dayBox.Items.Add(String.Format("{0:D2}", i + 1));
+            }
+            Grid.SetRow(this.dayBox, 0);
+            Grid.SetColumn(this.dayBox, (int)(this.order));
+            g.Children.Add(this.dayBox);
+            Grid.SetRow(g, 0);
+            Grid.SetColumn(g, 1);
+            this.dateGrid.Children.Add(g);
+            rd = new RowDefinition();
+            rd.Height = GridLength.Auto;
+            this.dateGrid.RowDefinitions.Add(rd);
+            l = new Label();
+            l.Content = "Time:";
+            Grid.SetRow(l, 1);
+            Grid.SetColumn(l, 0);
+            this.dateGrid.Children.Add(l);
+            g = new Grid();
+            cd = new ColumnDefinition();
+            cd.Width = GridLength.Auto;
+            g.ColumnDefinitions.Add(cd);
+            cd = new ColumnDefinition();
+            cd.Width = GridLength.Auto;
+            g.ColumnDefinitions.Add(cd);
+            cd = new ColumnDefinition();
+            cd.Width = GridLength.Auto;
+            g.ColumnDefinitions.Add(cd);
+            cd = new ColumnDefinition();
+            cd.Width = GridLength.Auto;
+            g.ColumnDefinitions.Add(cd);
+            cd = new ColumnDefinition();
+            cd.Width = GridLength.Auto;
+            g.ColumnDefinitions.Add(cd);
+            rd = new RowDefinition();
+            rd.Height = GridLength.Auto;
+            g.RowDefinitions.Add(rd);
+            this.hourBox = new ComboBox();
+            for (int i = 0; i < 24; i++) { this.hourBox.Items.Add(String.Format("{0:D2}", i)); }
+            Grid.SetRow(this.hourBox, 0);
+            Grid.SetColumn(this.hourBox, 0);
+            g.Children.Add(this.hourBox);
+            l = new Label();
+            l.Content = ":";
+            Grid.SetRow(l, 0);
+            Grid.SetColumn(l, 1);
+            g.Children.Add(l);
+            this.minBox = new ComboBox();
+            for (int i = 0; i < 60; i++) { this.minBox.Items.Add(String.Format("{0:D2}", i)); }
+            Grid.SetRow(this.minBox, 0);
+            Grid.SetColumn(this.minBox, 2);
+            g.Children.Add(this.minBox);
+            l = new Label();
+            l.Content = ":";
+            Grid.SetRow(l, 0);
+            Grid.SetColumn(l, 3);
+            g.Children.Add(l);
+            this.secBox = new ComboBox();
+            for (int i = 0; i < 60; i++) { this.secBox.Items.Add(String.Format("{0:D2}", i)); }
+            Grid.SetRow(this.secBox, 0);
+            Grid.SetColumn(this.secBox, 4);
+            g.Children.Add(this.secBox);
+            Grid.SetRow(g, 1);
+            Grid.SetColumn(g, 1);
+            this.dateGrid.Children.Add(g);
+        }
+
+        protected override void setDefaultValues(Timestamp t) {
+            base.setDefaultValues(t);
+            SimpleCalendar.Date d = ((SimpleCalendar)(this.calendar)).getDate(t);
+            this.yearBox.Value = d.year;
+            this.monthBox.SelectedIndex = (int)(d.month - 1);
+            this.dayBox.SelectedIndex = (int)(d.day - 1);
+            int s = ((SimpleCalendar)(this.calendar)).getTime(t); // time of day in seconds
+            this.secBox.SelectedIndex = s % 60;
+            s /= 60; // s now in minutes
+            this.minBox.SelectedIndex = s % 60;
+            s /= 60; // s now in hours
+            this.hourBox.SelectedIndex = s % 24; // s should already be in [0, 24), but one mod is cheap in user time scale
+        }
+
+        public override Timestamp getTimestamp() {
+            long year = (long)(this.yearBox.Value);
+            uint month = (uint)(this.monthBox.SelectedIndex) + 1, day = (uint)(this.dayBox.SelectedIndex) + 1;
+            uint hour = (uint)(this.hourBox.SelectedIndex), min = (uint)(this.minBox.SelectedIndex), sec = (uint)(this.secBox.SelectedIndex);
+            return this.calendar.newTimestamp(year, month, 0, day, hour, min, sec, this.getPrecision());
+        }
+    }
+
+
     static class Calendars {
         private const String defaultCalendar = "Campaign Date";
 
         private class CalImpl {
             public Func<Calendar> calendar;
+            public Func<String, Timestamp, DatePickerDialog> picker;
 
-            public CalImpl(Func<Calendar> calendar) {
+            public CalImpl(Func<Calendar> calendar, Func<String, Timestamp, DatePickerDialog> picker) {
                 this.calendar = calendar;
+                this.picker = picker;
             }
         }
 
         private static Dictionary<String, CalImpl> calendars = new Dictionary<string, CalImpl>() {
-            { "Greyhawk", new CalImpl( () => new GreyhawkCalendar() ) },
-            { "Eberron", new CalImpl( () => new EberronCalendar() ) },
-            { "Forgotten Realms", new CalImpl( () => new FRCalendar() ) },
-            { "Gregorian", new CalImpl( () => new GregorianCalendar() ) },
-            { "Julian", new CalImpl( () => new JulianCalendar() ) },
-            { defaultCalendar, new CalImpl( () => new CampaignCalendar() ) }
+            { "Greyhawk", new CalImpl( () => new GreyhawkCalendar(), (title, t) => new SimpleDatePickerDialog(title, t) ) },//
+            { "Eberron", new CalImpl( () => new EberronCalendar(), (title, t) => new SimpleDatePickerDialog(title, t) ) },//
+            { "Forgotten Realms", new CalImpl( () => new FRCalendar(), (title, t) => new SimpleDatePickerDialog(title, t) ) },//
+            { "Gregorian", new CalImpl( () => new GregorianCalendar(), (title, t) => new SimpleDatePickerDialog(title, t) ) },//
+            { "Julian", new CalImpl( () => new JulianCalendar(), (title, t) => new JulianDatePickerDialog(title, t) ) },
+            { defaultCalendar, new CalImpl( () => new CampaignCalendar(), (title, t) => new DayTimePickerDialog(title, t) ) }
         };
 
         public static ICollection<String> getCalendars() {
             return calendars.Keys;
         }
 
+        private static CalImpl getCalImpl(String calendar) {
+            if (calendars.ContainsKey(calendar)) { return calendars[calendar]; }
+            return calendars[defaultCalendar];
+        }
+
         public static Calendar newCalendar(String calendar) {
-            return (calendars.ContainsKey(calendar) ? calendars[calendar] : calendars[defaultCalendar]).calendar.Invoke();
+            return getCalImpl(calendar).calendar.Invoke();
+        }
+
+        public static Timestamp askTimestamp(String calendar, String title, Timestamp t, Window owner = null) {
+            DatePickerDialog dlg = getCalImpl(calendar).picker.Invoke(title, t);
+            if (owner != null) {
+                dlg.Owner = owner;
+            }
+            dlg.ShowDialog();
+            if (!dlg.valid) { return null; }
+            return dlg.getTimestamp();
         }
     }
 }

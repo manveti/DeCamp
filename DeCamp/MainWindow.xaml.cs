@@ -50,6 +50,16 @@ namespace DeCamp {
 
         //other menu handlers
         //timeline handlers
+/////
+//
+        public void setDate(object sender, RoutedEventArgs e) {
+            Timestamp t = Calendars.askTimestamp(this.campaign.calendarName, "Date", this.campaign.getTimestamp(), this);
+            if (t == null) { return; }
+            this.campaign.setTimestamp(t);
+            this.showCampaign();
+        }
+//
+/////
         //party handlers
         //journal handlers
 

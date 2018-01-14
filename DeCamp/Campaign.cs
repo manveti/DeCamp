@@ -9,8 +9,9 @@ namespace DeCamp {
         public String name;
         private Dictionary<String, Player> players;
         private String gm;
+        public readonly String calendarName;
         private readonly Calendar calendar;
-        private readonly String ruleset;
+        private readonly String rulesetName;
         private Dictionary<String, Character> party;
         private Timestamp now;
         private SortedDictionary<Timestamp, Event> timeline;
@@ -21,8 +22,9 @@ namespace DeCamp {
             this.name = name;
             this.players = new Dictionary<string, Player>();
             this.gm = this.addPlayer(gm);
-            this.calendar = Calendars.newCalendar(calendar);
-            this.ruleset = ruleset;
+            this.calendarName = calendar;
+            this.calendar = Calendars.newCalendar(this.calendarName);
+            this.rulesetName = ruleset;
             this.party = new Dictionary<string, Character>();
             this.now = this.calendar.defaultTimestamp();
         }
@@ -64,9 +66,13 @@ namespace DeCamp {
             this.handleTimeChange();
         }
 
-        public void setTimestamp(long year, uint month, uint week, uint day, uint hour, uint minute, uint second, Calendar.Interval precision) {
-            this.now = this.calendar.newTimestamp(year, month, week, day, hour, minute, second, precision);
+        public void setTimestamp(Timestamp t) {
+            this.now = t;
             this.handleTimeChange();
+        }
+
+        public void setTimestamp(long year, uint month, uint week, uint day, uint hour, uint minute, uint second, Calendar.Interval precision) {
+            this.setTimestamp(this.calendar.newTimestamp(year, month, week, day, hour, minute, second, precision));
         }
 
         //...

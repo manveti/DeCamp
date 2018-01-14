@@ -51,7 +51,7 @@
                 <Button Grid.Row="0" Grid.Column="3" Content="-M" ToolTip="Rewind 1 Month"/>
                 <Button Grid.Row="0" Grid.Column="4" Content="-D" ToolTip="Rewind 1 Day"/>
                 <Button Grid.Row="0" Grid.Column="5" Content="-H" ToolTip="Rewind 1 Hour"/>
-                <Button Grid.Row="0" Grid.Column="6" Margin="3,0,3,0" Content="Set"/>
+                <Button Grid.Row="0" Grid.Column="6" Margin="3,0,3,0" Content="Set" Click="setDate"/>
                 <Button Grid.Row="0" Grid.Column="7" Content="+H" ToolTip="Advance 1 Hour"/>
                 <Button Grid.Row="0" Grid.Column="8" Content="+D" ToolTip="Advance 1 Day"/>
                 <Button Grid.Row="0" Grid.Column="9" Content="+M" ToolTip="Advance 1 Month"/>
