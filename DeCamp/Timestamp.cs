@@ -553,7 +553,7 @@ namespace DeCamp {
     }
 
     abstract class LeapCalendar : SimpleCalendar {
-        protected uint? leapMonth;
+        public uint? leapMonth;
         protected uint cycleYears;
         protected uint cycleLeapDays;
         protected Decimal? cycleLength;
@@ -840,9 +840,12 @@ namespace DeCamp {
         protected ComboBox precisionBox;
         public bool valid;
 
-        public DatePickerDialog(String title, Timestamp t) {
-            this.calendar = t.calendar;
+        public DatePickerDialog(Calendar calendar) {
+            this.calendar = calendar;
             this.valid = false;
+        }
+
+        public virtual void populateDialog(String title, Timestamp t) {
             this.WindowStartupLocation = WindowStartupLocation.CenterOwner;
             this.SizeToContent = SizeToContent.WidthAndHeight;
             this.Title = title;
@@ -943,7 +946,7 @@ namespace DeCamp {
     class DayPickerDialog : DatePickerDialog {
         protected SpinBox dateBox;
 
-        public DayPickerDialog(String title, Timestamp t) : base(title, t) { }
+        public DayPickerDialog(Calendar calendar) : base(calendar) { }
 
         protected override void populateDateGrid() {
             ColumnDefinition cd = new ColumnDefinition();
@@ -975,7 +978,7 @@ namespace DeCamp {
     }
 
     class JulianDatePickerDialog : DayPickerDialog {
-        public JulianDatePickerDialog(String title, Timestamp t) : base(title, t) { }
+        public JulianDatePickerDialog(Calendar calendar) : base(calendar) { }
 
         protected override void setDefaultValues(Timestamp t) {
             base.setDefaultValues(t);
@@ -990,7 +993,7 @@ namespace DeCamp {
     class DayTimePickerDialog : DayPickerDialog {
         protected ComboBox hourBox, minBox, secBox;
 
-        public DayTimePickerDialog(String title, Timestamp t) : base(title, t) { }
+        public DayTimePickerDialog(Calendar calendar) : base(calendar) { }
 
         protected override void populateDateGrid() {
             base.populateDateGrid();
@@ -1081,7 +1084,7 @@ namespace DeCamp {
         protected SpinBox yearBox;
         protected ComboBox monthBox, dayBox, hourBox, minBox, secBox;
 
-        public SimpleDatePickerDialog(String title, Timestamp t, DateOrder order = DateOrder.DMY) : base(title, t) {
+        public SimpleDatePickerDialog(Calendar calendar, DateOrder order = DateOrder.DMY) : base(calendar) {
             this.order = order;
         }
 
@@ -1122,6 +1125,7 @@ namespace DeCamp {
                 this.monthBox.Items.Add(cal.months[i].name);
                 if (cal.months[i].days > maxDays) { maxDays = (int)(cal.months[i].days); }
             }
+            this.monthBox.SelectionChanged += this.monthChanged;
             Grid.SetRow(this.monthBox, 0);
             Grid.SetColumn(this.monthBox, (this.order == DateOrder.MDY ? 0 : 1));
             g.Children.Add(this.monthBox);
@@ -1212,29 +1216,67 @@ namespace DeCamp {
             uint hour = (uint)(this.hourBox.SelectedIndex), min = (uint)(this.minBox.SelectedIndex), sec = (uint)(this.secBox.SelectedIndex);
             return this.calendar.newTimestamp(year, month, 0, day, hour, min, sec, this.getPrecision());
         }
+
+        protected virtual void monthChanged(object sender, RoutedEventArgs e) {
+            SimpleCalendar cal = (SimpleCalendar)(this.calendar);
+            int month = this.monthBox.SelectedIndex;
+            if ((month < 0) || (month >= cal.months.Length)) { return; }
+            int day = this.dayBox.SelectedIndex;
+            if (day >= cal.months[month].days) { day = (int)(cal.months[month].days) - 1; }
+            this.dayBox.Items.Clear();
+            for (int i = 0; i < cal.months[month].days; i++) {
+                this.dayBox.Items.Add(String.Format("{0:D2}", i + 1));
+            }
+            if (day >= 0) { this.dayBox.SelectedIndex = day; }
+        }
+    }
+
+    class LeapDatePickerDialog : SimpleDatePickerDialog {
+        public LeapDatePickerDialog(Calendar calendar, DateOrder order = DateOrder.DMY) : base(calendar, order) { }
+
+        protected override void populateDateGrid() {
+            base.populateDateGrid();
+            this.yearBox.ValueChanged += this.monthChanged;
+        }
+
+        protected override void monthChanged(object sender, RoutedEventArgs e) {
+            LeapCalendar cal = (LeapCalendar)(this.calendar);
+            long year = (long)(this.yearBox.Value);
+            int month = this.monthBox.SelectedIndex;
+            if ((month < 0) || (month >= cal.months.Length)) { return; }
+            int monthDays = (int)(cal.months[month].days);
+            if ((month + 1 == cal.leapMonth) && (cal.isLeapYear(year))) { monthDays += 1; }
+            int day = this.dayBox.SelectedIndex;
+            if (day >= monthDays) { day = monthDays - 1; }
+            this.dayBox.Items.Clear();
+            for (int i = 0; i < monthDays; i++) {
+                this.dayBox.Items.Add(String.Format("{0:D2}", i + 1));
+            }
+            if (day >= 0) { this.dayBox.SelectedIndex = day; }
+        }
     }
 
 
     static class Calendars {
-        private const String defaultCalendar = "Campaign Date";
+        public const String defaultCalendar = "Campaign Date";
 
         private class CalImpl {
             public Func<Calendar> calendar;
-            public Func<String, Timestamp, DatePickerDialog> picker;
+            public Func<Calendar, DatePickerDialog> picker;
 
-            public CalImpl(Func<Calendar> calendar, Func<String, Timestamp, DatePickerDialog> picker) {
+            public CalImpl(Func<Calendar> calendar, Func<Calendar, DatePickerDialog> picker) {
                 this.calendar = calendar;
                 this.picker = picker;
             }
         }
 
-        private static Dictionary<String, CalImpl> calendars = new Dictionary<string, CalImpl>() {
-            { "Greyhawk", new CalImpl( () => new GreyhawkCalendar(), (title, t) => new SimpleDatePickerDialog(title, t) ) },//
-            { "Eberron", new CalImpl( () => new EberronCalendar(), (title, t) => new SimpleDatePickerDialog(title, t) ) },//
-            { "Forgotten Realms", new CalImpl( () => new FRCalendar(), (title, t) => new SimpleDatePickerDialog(title, t) ) },//
-            { "Gregorian", new CalImpl( () => new GregorianCalendar(), (title, t) => new SimpleDatePickerDialog(title, t) ) },//
-            { "Julian", new CalImpl( () => new JulianCalendar(), (title, t) => new JulianDatePickerDialog(title, t) ) },
-            { defaultCalendar, new CalImpl( () => new CampaignCalendar(), (title, t) => new DayTimePickerDialog(title, t) ) }
+        private static SortedDictionary<String, CalImpl> calendars = new SortedDictionary<string, CalImpl>() {
+            { "Greyhawk", new CalImpl( () => new GreyhawkCalendar(), (cal) => new SimpleDatePickerDialog(cal) ) },
+            { "Eberron", new CalImpl( () => new EberronCalendar(), (cal) => new SimpleDatePickerDialog(cal) ) },
+            { "Forgotten Realms", new CalImpl( () => new FRCalendar(), (cal) => new LeapDatePickerDialog(cal, SimpleDatePickerDialog.DateOrder.MDY) ) },
+            { "Gregorian", new CalImpl( () => new GregorianCalendar(), (cal) => new LeapDatePickerDialog(cal, SimpleDatePickerDialog.DateOrder.MDY) ) },
+            { "Julian", new CalImpl( () => new JulianCalendar(), (cal) => new JulianDatePickerDialog(cal) ) },
+            { defaultCalendar, new CalImpl( () => new CampaignCalendar(), (cal) => new DayTimePickerDialog(cal) ) }
         };
 
         public static ICollection<String> getCalendars() {
@@ -1251,10 +1293,11 @@ namespace DeCamp {
         }
 
         public static Timestamp askTimestamp(String calendar, String title, Timestamp t, Window owner = null) {
-            DatePickerDialog dlg = getCalImpl(calendar).picker.Invoke(title, t);
+            DatePickerDialog dlg = getCalImpl(calendar).picker.Invoke(t.calendar);
             if (owner != null) {
                 dlg.Owner = owner;
             }
+            dlg.populateDialog(title, t);
             dlg.ShowDialog();
             if (!dlg.valid) { return null; }
             return dlg.getTimestamp();
