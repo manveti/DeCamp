@@ -8,5 +8,7 @@ namespace DeCamp {
     class Character {
         public String player;
         public String name;
+        //attributes
+        protected SortedSet<Timestamp> modEventTimes;
     }
 }

@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 
 namespace DeCamp {
     class Campaign {
+        public const String gmKey = "__GM__";
+
         public String name;
         private Dictionary<String, Player> players;
         private String gm;
@@ -14,7 +16,7 @@ namespace DeCamp {
         private readonly String rulesetName;
         private Dictionary<String, Character> party;
         private Timestamp now;
-        private SortedDictionary<Timestamp, Event> timeline;
+        private SortedDictionary<Timestamp, EventBucket> timeline;
         //todo
         //journal
 
@@ -33,8 +35,14 @@ namespace DeCamp {
             return this.players.Keys;
         }
 
+        public Player getPlayer(String key) {
+            if (key == gmKey) { return this.getPlayer(this.gm); }
+            return this.players[key];
+        }
+
         public String addPlayer(String name) {
             String key = name;
+            if (key == gmKey) { key += "0"; } // disallow gmKey
             for (int i = 0; this.players.ContainsKey(key); i++) {
                 key = name + i;
             }
@@ -47,6 +55,7 @@ namespace DeCamp {
 /////
 //
             //traverse party, events, etc. to deal with references to player (change resource ownership to gm, remove access, etc.)
+            //do something useful if player is gm (i.e. key==this.gm)
 //
 /////
             this.players.Remove(key);
