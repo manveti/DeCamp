@@ -64,7 +64,28 @@ namespace DeCamp {
         //get/change gm
         //future: change calendar
         //future: change ruleset
-        //get party (change through events)
+
+        public ICollection<String> getParty() {
+            return this.party.Keys;
+        }
+
+        public Character getCharacter(String key) {
+            return this.party[key];
+        }
+
+        public String addCharacter(Character c) {
+            String key = c.name;
+            for (int i = 0; this.party.ContainsKey(key); i++) {
+                key = c.name + i;
+            }
+            this.party[key] = c;
+            return key;
+        }
+
+        public void removeCharacter(String key) {
+            if (!this.party.ContainsKey(key)) { return; }
+            this.party.Remove(key);
+        }
 
         public Timestamp getTimestamp() {
             return this.now;
