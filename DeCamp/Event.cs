@@ -29,12 +29,12 @@ namespace DeCamp {
             return (player == this.creator) || (this.editors == null) || (this.editors.Contains(player));
         }
 
-        public virtual void apply(Campaign c) {
-            foreach (EventResult res in this.results) { res.apply(c); }
+        public virtual void apply(CampaignState s) {
+            foreach (EventResult res in this.results) { res.apply(s); }
         }
 
-        public virtual void revert(Campaign c) {
-            foreach (EventResult res in this.results) { res.revert(c); }
+        public virtual void revert(CampaignState s) {
+            foreach (EventResult res in this.results) { res.revert(s); }
         }
     }
 
@@ -50,8 +50,8 @@ namespace DeCamp {
             this.summary = summary;
         }
 
-        public abstract void apply(Campaign c);
-        public abstract void revert(Campaign c);
+        public abstract void apply(CampaignState s);
+        public abstract void revert(CampaignState s);
     }
 
     class CharacterAddResult : EventResult {
@@ -62,12 +62,12 @@ namespace DeCamp {
             this.character = character;
         }
 
-        public override void apply(Campaign c) {
-            this.charId = c.addCharacter(this.character);
+        public override void apply(CampaignState s) {
+            this.charId = s.addCharacter(this.character);
         }
 
-        public override void revert(Campaign c) {
-            c.removeCharacter(this.charId);
+        public override void revert(CampaignState s) {
+            s.removeCharacter(this.charId);
         }
     }
 
@@ -79,13 +79,13 @@ namespace DeCamp {
             this.charId = charId;
         }
 
-        public override void apply(Campaign c) {
-            this.character = c.getCharacter(this.charId);
-            c.removeCharacter(this.charId);
+        public override void apply(CampaignState s) {
+            this.character = s.getCharacter(this.charId);
+            s.removeCharacter(this.charId);
         }
 
-        public override void revert(Campaign c) {
-            this.charId = c.addCharacter(this.character);
+        public override void revert(CampaignState s) {
+            this.charId = s.addCharacter(this.character);
         }
     }
 
@@ -145,17 +145,17 @@ namespace DeCamp {
             this.modifications = mods;
         }
 
-        public override void apply(Campaign c) {
-            Character ch = c.getCharacter(this.charId);
+        public override void apply(CampaignState s) {
+            Character c = s.getCharacter(this.charId);
             foreach (AttributeMod m in this.modifications) {
-                m.apply(ch);
+                m.apply(c);
             }
         }
 
-        public override void revert(Campaign c) {
-            Character ch = c.getCharacter(this.charId);
+        public override void revert(CampaignState s) {
+            Character c = s.getCharacter(this.charId);
             foreach (AttributeMod m in this.modifications) {
-                m.revert(ch);
+                m.revert(c);
             }
         }
     }
