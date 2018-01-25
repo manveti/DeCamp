@@ -36,7 +36,7 @@ namespace DeCamp {
             QueryPrompt[] prompts = {
                 new QueryPrompt("Campaign Name:", QueryType.STRING, "New Campaign"),
                 new QueryPrompt("Calendar:", QueryType.LIST, Calendars.defaultCalendar, values: Calendars.getCalendars().ToArray()),
-                new QueryPrompt("Rule Set:", QueryType.LIST, values: new String[]{ "D&D 3.5" })
+                new QueryPrompt("Rule Set:", QueryType.LIST, Rulesets.defaultRuleset, values: Rulesets.getRulesets().ToArray())
             };
             object[] values = SimpleDialog.askCompound("New Campaign", prompts, this);
             if (values == null) { return; }

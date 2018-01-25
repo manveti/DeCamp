@@ -58,6 +58,7 @@ namespace DeCamp {
         public readonly String calendarName;
         private readonly Calendar calendar;
         private readonly String rulesetName;
+        private readonly Ruleset ruleset;
         private Timestamp now;
         private CampaignState state;
         private SortedDictionary<Timestamp, EventBucket> timeline;
@@ -69,6 +70,7 @@ namespace DeCamp {
             this.calendarName = calendar;
             this.calendar = Calendars.newCalendar(this.calendarName);
             this.rulesetName = ruleset;
+            this.ruleset = Rulesets.newRuleset(this.rulesetName);
             this.now = this.calendar.defaultTimestamp();
             this.state = new CampaignState(this.now);
         }
