@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:DeCamp"
         mc:Ignorable="d"
-        Title="Aide de Campaign" Width="800" Height="600">
+        Title="Aide de Campaign" Width="1000" Height="600">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -45,21 +45,23 @@
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
                 <Label Grid.Row="0" Grid.Column="0" Content="Current Campaign Time:"/>
                 <Label Grid.Row="0" Grid.Column="1" Name="timestampBox"/>
-                <Button Grid.Row="0" Grid.Column="2" Content="-?" ToolTip="Rewind Specified Amount"/>
-                <Button Grid.Row="0" Grid.Column="3" Content="-Y" ToolTip="Rewind 1 Year"/>
-                <Button Grid.Row="0" Grid.Column="4" Content="-M" ToolTip="Rewind 1 Month"/>
-                <Button Grid.Row="0" Grid.Column="5" Content="-D" ToolTip="Rewind 1 Day"/>
-                <Button Grid.Row="0" Grid.Column="6" Content="-H" ToolTip="Rewind 1 Hour"/>
+                <Button Grid.Row="0" Grid.Column="2" Content="-?" ToolTip="Rewind Specified Amount" Click="adjustDate"/>
+                <Button Grid.Row="0" Grid.Column="3" Content="-Y" ToolTip="Rewind 1 Year" Click="adjustDate"/>
+                <Button Grid.Row="0" Grid.Column="4" Content="-M" ToolTip="Rewind 1 Month" Click="adjustDate"/>
+                <Button Grid.Row="0" Grid.Column="5" Content="-D" ToolTip="Rewind 1 Day" Click="adjustDate"/>
+                <Button Grid.Row="0" Grid.Column="6" Content="-H" ToolTip="Rewind 1 Hour" Click="adjustDate"/>
                 <Button Grid.Row="0" Grid.Column="7" Margin="3,0,3,0" Content="Set" Click="setDate"/>
-                <Button Grid.Row="0" Grid.Column="8" Content="+H" ToolTip="Advance 1 Hour"/>
-                <Button Grid.Row="0" Grid.Column="9" Content="+D" ToolTip="Advance 1 Day"/>
-                <Button Grid.Row="0" Grid.Column="10" Content="+M" ToolTip="Advance 1 Month"/>
-                <Button Grid.Row="0" Grid.Column="11" Content="+Y" ToolTip="Advance 1 Year"/>
-                <Button Grid.Row="0" Grid.Column="12" Content="+?" ToolTip="Advance Specified Amount"/>
+                <Button Grid.Row="0" Grid.Column="8" Content="+H" ToolTip="Advance 1 Hour" Click="adjustDate"/>
+                <Button Grid.Row="0" Grid.Column="9" Content="+D" ToolTip="Advance 1 Day" Click="adjustDate"/>
+                <Button Grid.Row="0" Grid.Column="10" Content="+M" ToolTip="Advance 1 Month" Click="adjustDate"/>
+                <Button Grid.Row="0" Grid.Column="11" Content="+Y" ToolTip="Advance 1 Year" Click="adjustDate"/>
+                <Button Grid.Row="0" Grid.Column="12" Content="+?" ToolTip="Advance Specified Amount" Click="adjustDate"/>
+                <Button Grid.Row="0" Grid.Column="13" Margin="10,0,0,0" Content="New Event..."/>
             </Grid>
         </GroupBox>
 
