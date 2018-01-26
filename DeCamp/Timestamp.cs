@@ -15,8 +15,8 @@ namespace DeCamp {
             this.value = value;
         }
 
-        public virtual String toString() {
-            return this.calendar.timeSpanToString(this);
+        public virtual String toString(bool precise = false) {
+            return this.calendar.timeSpanToString(this, precise);
         }
     }
 
@@ -116,7 +116,45 @@ namespace DeCamp {
             return this.newTimestamp(0);
         }
 
-        public abstract String timeSpanToString(TimeSpan s);
+        public virtual String timeSpanToString(TimeSpan s, bool precise = false) {
+            String retval = "";
+            Decimal value = s.value;
+            bool gotStep = false;
+            if (value < 0) {
+                retval += "-";
+                value = -value;
+            }
+            Tuple<Interval, String>[] unitSpecs = new Tuple<Interval, String>[] {
+                new Tuple<Interval, String>(Interval.year, "year"),
+                new Tuple<Interval, String>(Interval.month, "month"),
+                new Tuple<Interval, String>(Interval.week, "week"),
+                new Tuple<Interval, String>(Interval.day, "day"),
+                new Tuple<Interval, String>(Interval.hour, "hour"),
+                new Tuple<Interval, String>(Interval.minute, "minute"),
+                new Tuple<Interval, String>(Interval.second, "second"),
+            };
+            foreach (Tuple<Interval, String> us in unitSpecs) {
+                Decimal len = this.getSpanLength(us.Item1);
+                Decimal stepRaw = value / len;
+                if ((gotStep) && (!precise)) {
+                    if (stepRaw > 0) {
+                        retval += String.Format(" {0:0.#} {1}", stepRaw, us.Item2);
+                        if (stepRaw != 1) { retval += "s"; }
+                    }
+                    break;
+                }
+                ulong step = (ulong)stepRaw;
+                if (step > 0) {
+                    if (gotStep) { retval += " "; }
+                    retval += String.Format("{0} {1}", step, us.Item2);
+                    if (step != 1) { retval += "s"; }
+                    value -= step * len;
+                    gotStep = true;
+                }
+            }
+            return retval;
+        }
+
         public abstract String timestampToString(Timestamp t, bool date = true, bool time = false);
         public abstract Timestamp add(Timestamp t, long amount, Interval unit = Interval.second);
 
@@ -130,6 +168,8 @@ namespace DeCamp {
             if (hours < 21) { return "Evening"; }
             return "Night";
         }
+
+        protected abstract Decimal getSpanLength(Interval unit);
     }
 
     abstract class DayCalendar : Calendar {
@@ -160,14 +200,6 @@ namespace DeCamp {
             value *= this.minuteSecs;
             if (precision >= Interval.second) { value += second; }
             return this.newTimestamp(value, precision);
-        }
-
-        public override String timeSpanToString(TimeSpan s) {
-/////
-//
-            throw new NotImplementedException();
-//
-/////
         }
 
         public override String timestampToString(Timestamp t, bool date = true, bool time = false) {
@@ -224,6 +256,35 @@ namespace DeCamp {
                 break;
             }
             return this.newTimestamp(value, t.precision);
+        }
+
+        protected override Decimal getSpanLength(Interval unit) {
+            Decimal retval = 1;
+            switch (unit) {
+            case Interval.year:
+                retval *= this.yearDays;
+                goto case Interval.day;
+            case Interval.month:
+                retval *= this.monthDays;
+                goto case Interval.day;
+            case Interval.week:
+                retval *= this.weekDays;
+                goto case Interval.day;
+            case Interval.day:
+                retval *= this.dayHours;
+                goto case Interval.hour;
+            case Interval.hour:
+                retval *= this.hourMins;
+                goto case Interval.minute;
+            case Interval.minute:
+                retval *= this.minuteSecs;
+                goto case Interval.second;
+            case Interval.second:
+                break;
+            default:
+                throw new ArgumentException("Cannot get length of unit " + unit);
+            }
+            return retval;
         }
 
         protected virtual Decimal getDate(Timestamp t) {
@@ -320,14 +381,6 @@ namespace DeCamp {
             return this.newTimestamp(value, precision);
         }
 
-        public override String timeSpanToString(TimeSpan s) {
-/////
-//
-            throw new NotImplementedException();
-//
-/////
-        }
-
         public override String timestampToString(Timestamp t, bool date = true, bool time = false) {
             String retval = "";
             if (t.precision <= Interval.day) { time = false; }
@@ -377,6 +430,44 @@ namespace DeCamp {
             return this.newTimestamp(value, t.precision);
         }
 
+        protected override Decimal getSpanLength(Interval unit) {
+            Decimal retval = 1;
+            uint dayCount = 0, monthCount = 0;
+            switch (unit) {
+            case Interval.year:
+                foreach (Month month in this.months) {
+                    dayCount += month.days;
+                }
+                retval *= dayCount;
+                goto case Interval.day;
+            case Interval.month:
+                foreach (Month month in this.months) {
+                    dayCount += month.days;
+                    if (!month.isVirtual) { monthCount += 1; }
+                }
+                if (monthCount == 0) { monthCount = (uint)(this.months.Length); }
+                retval *= dayCount / monthCount;
+                goto case Interval.day;
+            case Interval.week:
+                retval *= this.days.Length;
+                goto case Interval.day;
+            case Interval.day:
+                retval *= 24;
+                goto case Interval.hour;
+            case Interval.hour:
+                retval *= 60;
+                goto case Interval.minute;
+            case Interval.minute:
+                retval *= 60;
+                goto case Interval.second;
+            case Interval.second:
+                break;
+            default:
+                throw new ArgumentException("Cannot get length of unit " + unit);
+            }
+            return retval;
+        }
+
         public virtual String getWeekday(Timestamp t) {
             return null;
         }
@@ -411,23 +502,19 @@ namespace DeCamp {
                 foreach (Month month in this.months) {
                     l += month.days;
                 }
-                return l * this.getIntervalLength(value, Interval.day, forwards);
+                return l * this.getSpanLength(Interval.day);
             case Interval.month:
                 Date d = this.getDate(this.newTimestamp(value));
                 d.month -= 1;
                 if (!forwards) { d.month -= 1; }
                 if (d.month < 0) { d.month += (uint)(this.months.Length); }
-                return this.months[d.month].days * this.getIntervalLength(value, Interval.day, forwards);
+                return this.months[d.month].days * this.getSpanLength(Interval.day);
             case Interval.week:
-                return 7 * this.getIntervalLength(value, Interval.day, forwards);
             case Interval.day:
-                return 24 * this.getIntervalLength(value, Interval.hour, forwards);
             case Interval.hour:
-                return 60 * this.getIntervalLength(value, Interval.minute, forwards);
             case Interval.minute:
-                return 60 * this.getIntervalLength(value, Interval.second, forwards);
             case Interval.second:
-                return 1;
+                return value * this.getSpanLength(unit);
             }
             return 0;
         }
@@ -498,6 +585,11 @@ namespace DeCamp {
                 unit = Interval.day;
             }
             return base.add(t, amount, unit);
+        }
+
+        protected override Decimal getSpanLength(Interval unit) {
+            if (unit == Interval.month) { return 28 * this.getSpanLength(Interval.day); }
+            return base.getSpanLength(unit);
         }
 
         public override String getWeekday(Timestamp t) {
@@ -607,14 +699,6 @@ namespace DeCamp {
             return this.newTimestamp(value, precision);
         }
 
-        public override String timeSpanToString(TimeSpan s) {
-/////
-//
-            throw new NotImplementedException();
-//
-/////
-        }
-
         public override Timestamp add(Timestamp t, long amount, Interval unit = Interval.second) {
             if ((unit == Interval.year) && (!this.intervalLengthConstant(Interval.year))) {
                 Decimal value = t.value;
@@ -642,13 +726,19 @@ namespace DeCamp {
             return base.add(t, amount, unit);
         }
 
+        protected override Decimal getSpanLength(Interval unit) {
+            if (unit == Interval.year) { return this.getCycleLength() / this.cycleYears; }
+            if (unit == Interval.month) { return this.getCycleLength() / (this.cycleYears * this.months.Length); }
+            return base.getSpanLength(unit);
+        }
+
         public virtual bool isLeapYear(long year) {
             return false;
         }
 
         public virtual Decimal getCycleLength() {
             if (this.cycleLength == null) {
-                this.cycleLength = (this.cycleYears * this.getBaseYearDays() + this.cycleLeapDays) * this.getIntervalLength(0, Interval.day);
+                this.cycleLength = (this.cycleYears * this.getBaseYearDays() + this.cycleLeapDays) * this.getSpanLength(Interval.day);
             }
             return (Decimal)(this.cycleLength);
         }
@@ -752,6 +842,11 @@ namespace DeCamp {
 
         public override Timestamp defaultTimestamp() {
             return this.newTimestamp(1491, 1, 0, 1, 12, 0, 0, Interval.time);
+        }
+
+        protected override Decimal getSpanLength(Interval unit) {
+            if (unit == Interval.month) { return 30 * this.getSpanLength(Interval.day); }
+            return base.getSpanLength(unit);
         }
 
         public override bool isLeapYear(long year) {
