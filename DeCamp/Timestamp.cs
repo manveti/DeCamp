@@ -152,6 +152,10 @@ namespace DeCamp {
                     gotStep = true;
                 }
             }
+            if (!gotStep) {
+                retval = String.Format("{0} second", s.value);
+                if (s.value != 1) { retval += "s"; }
+            }
             return retval;
         }
 
