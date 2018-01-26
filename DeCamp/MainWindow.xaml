@@ -61,7 +61,7 @@
                 <Button Grid.Row="0" Grid.Column="10" Content="+M" ToolTip="Advance 1 Month" Click="adjustDate"/>
                 <Button Grid.Row="0" Grid.Column="11" Content="+Y" ToolTip="Advance 1 Year" Click="adjustDate"/>
                 <Button Grid.Row="0" Grid.Column="12" Content="+?" ToolTip="Advance Specified Amount" Click="adjustDate"/>
-                <Button Grid.Row="0" Grid.Column="13" Margin="10,0,0,0" Content="New Event..."/>
+                <Button Grid.Row="0" Grid.Column="13" Margin="10,0,0,0" Content="New Event..." Click="newEvent"/>
             </Grid>
         </GroupBox>
 

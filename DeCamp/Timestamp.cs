@@ -7,7 +7,7 @@ using GUIx;
 
 namespace DeCamp {
     class TimeSpan {
-        protected readonly Calendar calendar;
+        public readonly Calendar calendar;
         public readonly Decimal value;
 
         public TimeSpan(Calendar calendar, Decimal value) {
@@ -112,6 +112,17 @@ namespace DeCamp {
 
         public abstract Timestamp newTimestamp(long year, uint month, uint week, uint day, uint hour, uint minute, uint second, Interval precision = Interval.second);
 
+        public virtual TimeSpan newTimeSpan(ulong years, uint months, uint weeks, uint days, uint hours, uint minutes, uint seconds) {
+            Decimal value = years * this.getSpanLength(Interval.year);
+            value += months * this.getSpanLength(Interval.month);
+            value += weeks * this.getSpanLength(Interval.week);
+            value += days * this.getSpanLength(Interval.day);
+            value += hours * this.getSpanLength(Interval.hour);
+            value += minutes * this.getSpanLength(Interval.minute);
+            value += seconds * this.getSpanLength(Interval.second);
+            return new TimeSpan(this, value);
+        }
+
         public virtual Timestamp defaultTimestamp() {
             return this.newTimestamp(0);
         }
@@ -173,7 +184,8 @@ namespace DeCamp {
             return "Night";
         }
 
-        protected abstract Decimal getSpanLength(Interval unit);
+        public abstract Decimal getSpanLength(Interval unit);
+        public abstract bool spanLengthConstant(Interval unit);
     }
 
     abstract class DayCalendar : Calendar {
@@ -262,7 +274,7 @@ namespace DeCamp {
             return this.newTimestamp(value, t.precision);
         }
 
-        protected override Decimal getSpanLength(Interval unit) {
+        public override Decimal getSpanLength(Interval unit) {
             Decimal retval = 1;
             switch (unit) {
             case Interval.year:
@@ -289,6 +301,10 @@ namespace DeCamp {
                 throw new ArgumentException("Cannot get length of unit " + unit);
             }
             return retval;
+        }
+
+        public override bool spanLengthConstant(Interval unit) {
+            return unit >= Interval.day;
         }
 
         protected virtual Decimal getDate(Timestamp t) {
@@ -418,7 +434,7 @@ namespace DeCamp {
             if (unit == Interval.time) { return null; } // can't add time of day
             if (amount == 0) { return t; }
             Decimal value = t.value;
-            if (this.intervalLengthConstant(unit)) {
+            if (this.spanLengthConstant(unit)) {
                 value += amount * this.getIntervalLength(value, unit);
             }
             else {
@@ -434,7 +450,7 @@ namespace DeCamp {
             return this.newTimestamp(value, t.precision);
         }
 
-        protected override Decimal getSpanLength(Interval unit) {
+        public override Decimal getSpanLength(Interval unit) {
             Decimal retval = 1;
             uint dayCount = 0, monthCount = 0;
             switch (unit) {
@@ -472,6 +488,10 @@ namespace DeCamp {
             return retval;
         }
 
+        public override bool spanLengthConstant(Interval unit) {
+            return unit != Interval.month;
+        }
+
         public virtual String getWeekday(Timestamp t) {
             return null;
         }
@@ -506,25 +526,25 @@ namespace DeCamp {
                 foreach (Month month in this.months) {
                     l += month.days;
                 }
-                return l * this.getSpanLength(Interval.day);
+                return l * this.getIntervalLength(value, Interval.day, forwards);
             case Interval.month:
                 Date d = this.getDate(this.newTimestamp(value));
                 d.month -= 1;
                 if (!forwards) { d.month -= 1; }
                 if (d.month < 0) { d.month += (uint)(this.months.Length); }
-                return this.months[d.month].days * this.getSpanLength(Interval.day);
+                return this.months[d.month].days * this.getIntervalLength(value, Interval.day, forwards);
             case Interval.week:
+                return 7 * this.getIntervalLength(value, Interval.day, forwards);
             case Interval.day:
+                return 24 * this.getIntervalLength(value, Interval.hour, forwards);
             case Interval.hour:
+                return 60 * this.getIntervalLength(value, Interval.minute, forwards);
             case Interval.minute:
+                return 60 * this.getIntervalLength(value, Interval.second, forwards);
             case Interval.second:
-                return value * this.getSpanLength(unit);
+                return 1;
             }
             return 0;
-        }
-
-        protected virtual bool intervalLengthConstant(Interval unit) {
-            return unit != Interval.month;
         }
     }
 
@@ -591,7 +611,7 @@ namespace DeCamp {
             return base.add(t, amount, unit);
         }
 
-        protected override Decimal getSpanLength(Interval unit) {
+        public override Decimal getSpanLength(Interval unit) {
             if (unit == Interval.month) { return 28 * this.getSpanLength(Interval.day); }
             return base.getSpanLength(unit);
         }
@@ -643,7 +663,7 @@ namespace DeCamp {
             return base.getIntervalLength(value, unit, forwards);
         }
 
-        protected override bool intervalLengthConstant(Interval unit) {
+        public override bool spanLengthConstant(Interval unit) {
             return true;
         }
     }
@@ -663,7 +683,7 @@ namespace DeCamp {
             }
             bool wasLeapYear = this.isLeapYear(year);
             if (precision >= Interval.year) {
-                if (this.intervalLengthConstant(Interval.year)) {
+                if (this.spanLengthConstant(Interval.year)) {
                     value += year * this.getIntervalLength(value, Interval.year);
                 }
                 else {
@@ -704,7 +724,7 @@ namespace DeCamp {
         }
 
         public override Timestamp add(Timestamp t, long amount, Interval unit = Interval.second) {
-            if ((unit == Interval.year) && (!this.intervalLengthConstant(Interval.year))) {
+            if ((unit == Interval.year) && (!this.spanLengthConstant(Interval.year))) {
                 Decimal value = t.value;
                 Date d = this.getDate(t);
                 if (this.cycleYears > 0) {
@@ -730,10 +750,14 @@ namespace DeCamp {
             return base.add(t, amount, unit);
         }
 
-        protected override Decimal getSpanLength(Interval unit) {
+        public override Decimal getSpanLength(Interval unit) {
             if (unit == Interval.year) { return this.getCycleLength() / this.cycleYears; }
             if (unit == Interval.month) { return this.getCycleLength() / (this.cycleYears * this.months.Length); }
             return base.getSpanLength(unit);
+        }
+
+        public override bool spanLengthConstant(Interval unit) {
+            return unit > Interval.month;
         }
 
         public virtual bool isLeapYear(long year) {
@@ -812,10 +836,6 @@ namespace DeCamp {
             }
             return base.getIntervalLength(value, unit, forwards);
         }
-
-        protected override bool intervalLengthConstant(Interval unit) {
-            return unit > Interval.month;
-        }
     }
 
     class FRCalendar : LeapCalendar {
@@ -848,9 +868,13 @@ namespace DeCamp {
             return this.newTimestamp(1491, 1, 0, 1, 12, 0, 0, Interval.time);
         }
 
-        protected override Decimal getSpanLength(Interval unit) {
+        public override Decimal getSpanLength(Interval unit) {
             if (unit == Interval.month) { return 30 * this.getSpanLength(Interval.day); }
             return base.getSpanLength(unit);
+        }
+
+        public override bool spanLengthConstant(Interval unit) {
+            return unit > Interval.week;
         }
 
         public override bool isLeapYear(long year) {
@@ -883,10 +907,6 @@ namespace DeCamp {
                 return retval;
             }
             return base.getIntervalLength(value, unit, forwards);
-        }
-
-        protected override bool intervalLengthConstant(Interval unit) {
-            return unit > Interval.week;
         }
     }
 
@@ -1400,6 +1420,63 @@ namespace DeCamp {
             dlg.ShowDialog();
             if (!dlg.valid) { return null; }
             return dlg.getTimestamp();
+        }
+
+        public static TimeSpan askTimeSpan(String title, TimeSpan s, Window owner = null) {
+            Decimal value = s.value, len;
+            int step;
+            List<QueryPrompt> prompts = new List<QueryPrompt>();
+            Tuple<Calendar.Interval, String>[] unitSpecs = new Tuple<Calendar.Interval, String>[] {
+                new Tuple<Calendar.Interval, String>(Calendar.Interval.year, "Years:"),
+                new Tuple<Calendar.Interval, String>(Calendar.Interval.month, "Months:"),
+                new Tuple<Calendar.Interval, String>(Calendar.Interval.week, "Weeks:"),
+                new Tuple<Calendar.Interval, String>(Calendar.Interval.day, "Days:"),
+                new Tuple<Calendar.Interval, String>(Calendar.Interval.hour, "Hours:"),
+                new Tuple<Calendar.Interval, String>(Calendar.Interval.minute, "Minutes:"),
+                new Tuple<Calendar.Interval, String>(Calendar.Interval.second, "Seconds:"),
+            };
+            foreach (Tuple<Calendar.Interval, String> us in unitSpecs) {
+                if (s.calendar.spanLengthConstant(us.Item1)) {
+                    len = s.calendar.getSpanLength(us.Item1);
+                    step = (int)(value / len);
+                    prompts.Add(new QueryPrompt(us.Item2, QueryType.INT, step, 0));
+                    value -= step * len;
+                }
+            }
+            object[] values = SimpleDialog.askCompound("Interval", prompts.ToArray(), owner);
+            if (values == null) { return null; }
+            ulong years = 0;
+            uint months = 0, weeks = 0, days = 0, hours = 0, minutes = 0, seconds = 0;
+            int idx = 0;
+            if (s.calendar.spanLengthConstant(Calendar.Interval.year)) {
+                years = (ulong)((int)values[idx]);
+                idx += 1;
+            }
+            if (s.calendar.spanLengthConstant(Calendar.Interval.month)) {
+                months = (uint)((int)values[idx]);
+                idx += 1;
+            }
+            if (s.calendar.spanLengthConstant(Calendar.Interval.week)) {
+                weeks = (uint)((int)values[idx]);
+                idx += 1;
+            }
+            if (s.calendar.spanLengthConstant(Calendar.Interval.day)) {
+                days = (uint)((int)values[idx]);
+                idx += 1;
+            }
+            if (s.calendar.spanLengthConstant(Calendar.Interval.hour)) {
+                hours = (uint)((int)values[idx]);
+                idx += 1;
+            }
+            if (s.calendar.spanLengthConstant(Calendar.Interval.minute)) {
+                minutes = (uint)((int)values[idx]);
+                idx += 1;
+            }
+            if (s.calendar.spanLengthConstant(Calendar.Interval.second)) {
+                seconds = (uint)((int)values[idx]);
+                idx += 1;
+            }
+            return s.calendar.newTimeSpan(years, months, weeks, days, hours, minutes, seconds);
         }
     }
 }

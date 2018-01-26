@@ -52,6 +52,7 @@ namespace DeCamp {
 
         // Timeline handlers
         public void adjustDate(object sender, RoutedEventArgs e) {
+            if (this.campaign == null) { return; }
             int amount = 1;
             Calendar.Interval unit;
             String lbl = (String)(((Button)sender).Content);
@@ -93,10 +94,21 @@ namespace DeCamp {
         }
 
         public void setDate(object sender, RoutedEventArgs e) {
+            if (this.campaign == null) { return; }
             Timestamp t = Calendars.askTimestamp(this.campaign.calendarName, "Date", this.campaign.getTimestamp(), this);
             if (t == null) { return; }
             this.campaign.setTimestamp(t);
             this.showCampaign();
+        }
+
+        public void newEvent(object sender, RoutedEventArgs e) {
+            if (this.campaign == null) { return; }
+/////
+//
+            EventDialog dlg = new EventDialog(new Event(Campaign.gmKey), this.campaign.getTimestamp(), this.campaign.calendarName, "New Event", Campaign.gmKey, this);
+            dlg.ShowDialog();
+//
+/////
         }
 
         //other timeline handlers

@@ -1,32 +1,38 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Controls;
+
+using GUIx;
 
 namespace DeCamp {
     class Event {
-        public String creator;
+        public String owner;
         public EventResult parent;
         public TimeSpan duration;
         public DateTime timestamp;
         private HashSet<String> viewers;
         private HashSet<String> editors;
         public String title, description, notes;
+        //isVirtual
         public List<EventResult> results;
 
         public Event(String creator, EventResult parent = null) {
-            this.creator = creator;
+            this.owner = creator;
             this.parent = parent;
             this.timestamp = DateTime.UtcNow;
         }
 
         public virtual bool canView(String player) {
-            return (player == this.creator) || (this.viewers == null) || (this.viewers.Contains(player));
+            return (player == this.owner) || (player == Campaign.gmKey) || (this.viewers == null) || (this.viewers.Contains(player));
+        }
+
+        public virtual bool canViewNotes(String player) {
+            return (player == this.owner) || (player == Campaign.gmKey);
         }
 
         public virtual bool canEdit(String player) {
-            return (player == this.creator) || (this.editors == null) || (this.editors.Contains(player));
+            return (player == this.owner) || (player == Campaign.gmKey) || (this.editors == null) || (this.editors.Contains(player));
         }
 
         public virtual void apply(CampaignState s) {
@@ -195,6 +201,334 @@ namespace DeCamp {
                 if (this.events == null) { this.events = new List<Event>(); }
                 return this.events;
             }
+        }
+    }
+
+
+    class EventDialog : Window {
+        public Event evt;
+        public Timestamp timestamp;
+        public readonly String calendarName;
+        protected Grid mainGrid, parentGrid, descGrid, resGrid, adminGrid;
+        protected TextBox startBox, endBox, durBox, tsBox;
+        protected Entry titleBox, descBox, notesBox;
+        public bool valid = false;
+
+        public EventDialog(Event evt, Timestamp timestamp, String calendar, String title, String player, Window owner = null) {
+            this.evt = evt;
+            this.timestamp = timestamp;
+            this.calendarName = calendar;
+            this.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+            this.SizeToContent = SizeToContent.WidthAndHeight;
+            this.Title = title;
+            if (owner != null) {
+                this.Owner = owner;
+            }
+            ColumnDefinition cd;
+            Label lbl;
+            bool canEdit = this.evt.canEdit(player);
+            this.mainGrid = new Grid();
+            this.mainGrid.ColumnDefinitions.Add(new ColumnDefinition());
+            cd = new ColumnDefinition();
+            cd.Width = GridLength.Auto;
+            this.mainGrid.ColumnDefinitions.Add(cd);
+            cd = new ColumnDefinition();
+            cd.Width = GridLength.Auto;
+            this.mainGrid.ColumnDefinitions.Add(cd);
+            RowDefinition rd = new RowDefinition();
+            rd.Height = GridLength.Auto;
+            this.mainGrid.RowDefinitions.Add(rd);
+            GroupBox grp = new GroupBox();
+            this.parentGrid = new Grid();
+            if (this.timestamp != null) {
+                grp.Header = "Date/Time";
+                if (this.evt.duration == null) {
+                    this.evt.duration = new TimeSpan(this.timestamp.calendar, 0);
+                }
+                cd = new ColumnDefinition();
+                cd.Width = GridLength.Auto;
+                this.parentGrid.ColumnDefinitions.Add(cd);
+                this.parentGrid.ColumnDefinitions.Add(new ColumnDefinition());
+                cd = new ColumnDefinition();
+                cd.Width = GridLength.Auto;
+                this.parentGrid.ColumnDefinitions.Add(cd);
+                this.parentGrid.ColumnDefinitions.Add(new ColumnDefinition());
+                rd = new RowDefinition();
+                rd.Height = GridLength.Auto;
+                this.parentGrid.RowDefinitions.Add(rd);
+                Button startBut = new Button();
+                startBut.Content = "Start:";
+                startBut.Click += this.setStart;
+                Grid.SetRow(startBut, 0);
+                Grid.SetColumn(startBut, 0);
+                this.parentGrid.Children.Add(startBut);
+                this.startBox = new TextBox();
+                this.startBox.IsReadOnly = true;
+                this.startBox.Text = (this.timestamp - this.evt.duration).toString(true, true);
+                Grid.SetRow(this.startBox, 0);
+                Grid.SetColumn(this.startBox, 1);
+                this.parentGrid.Children.Add(this.startBox);
+                Button endBut = new Button();
+                endBut.Content = "End:";
+                endBut.Click += this.setEnd;
+                Grid.SetRow(endBut, 0);
+                Grid.SetColumn(endBut, 2);
+                this.parentGrid.Children.Add(endBut);
+                this.endBox = new TextBox();
+                this.endBox.IsReadOnly = true;
+                this.endBox.Text = this.timestamp.toString(true, true);
+                Grid.SetRow(this.endBox, 0);
+                Grid.SetColumn(this.endBox, 3);
+                this.parentGrid.Children.Add(this.endBox);
+                rd = new RowDefinition();
+                rd.Height = GridLength.Auto;
+                this.parentGrid.RowDefinitions.Add(rd);
+                Button durBut = new Button();
+                durBut.Content = "Duration:";
+                durBut.Click += this.setDuration;
+                Grid.SetRow(durBut, 1);
+                Grid.SetColumn(durBut, 0);
+                this.parentGrid.Children.Add(durBut);
+                this.durBox = new TextBox();
+                this.durBox.IsReadOnly = true;
+                this.durBox.Text = this.evt.duration.toString(true);
+                Grid.SetRow(this.durBox, 1);
+                Grid.SetColumn(this.durBox, 1);
+                Grid.SetColumnSpan(this.durBox, 3);
+                this.parentGrid.Children.Add(this.durBox);
+                if (!canEdit) {
+                    startBut.IsEnabled = false;
+                    endBut.IsEnabled = false;
+                    durBox.IsEnabled = false;
+                }
+            }
+            else {
+                grp.Header = "Parent";
+                this.parentGrid.ColumnDefinitions.Add(new ColumnDefinition());
+                rd = new RowDefinition();
+                rd.Height = GridLength.Auto;
+                this.parentGrid.RowDefinitions.Add(rd);
+                lbl = new Label();
+                if (this.evt != null) {
+                    lbl.Content = this.evt.parent.parent.title;
+                }
+                else {
+                    lbl.Content = "Event is in vault";
+                }
+                Grid.SetRow(lbl, 0);
+                Grid.SetColumn(lbl, 0);
+                this.parentGrid.Children.Add(lbl);
+            }
+            Grid g = new Grid();
+            rd = new RowDefinition();
+            rd.Height = GridLength.Auto;
+            this.parentGrid.RowDefinitions.Add(rd);
+            cd = new ColumnDefinition();
+            cd.Width = GridLength.Auto;
+            g.ColumnDefinitions.Add(cd);
+            g.ColumnDefinitions.Add(new ColumnDefinition());
+            rd = new RowDefinition();
+            rd.Height = GridLength.Auto;
+            g.RowDefinitions.Add(rd);
+            Button tsBut = new Button();
+            tsBut.Content = "Timestamp:";
+/////
+//
+            //button click handler
+//
+/////
+            Grid.SetRow(tsBut, 0);
+            Grid.SetColumn(tsBut, 0);
+            g.Children.Add(tsBut);
+            this.tsBox = new TextBox();
+            this.tsBox.IsReadOnly = true;
+            this.tsBox.Text = this.evt.timestamp.ToLocalTime().ToString();
+            Grid.SetRow(this.tsBox, 0);
+            Grid.SetColumn(this.tsBox, 1);
+            g.Children.Add(this.tsBox);
+            Grid.SetRow(g, this.parentGrid.RowDefinitions.Count);
+            Grid.SetColumn(g, 0);
+            Grid.SetColumnSpan(g, this.parentGrid.ColumnDefinitions.Count);
+            this.parentGrid.Children.Add(g);
+            grp.Content = this.parentGrid;
+            Grid.SetRow(grp, 0);
+            Grid.SetColumn(grp, 0);
+            Grid.SetColumnSpan(grp, 3);
+            this.mainGrid.Children.Add(grp);
+            rd = new RowDefinition();
+            rd.Height = new GridLength(3, GridUnitType.Star);
+            this.mainGrid.RowDefinitions.Add(rd);
+            grp = new GroupBox();
+            grp.Header = "Description";
+            this.descGrid = new Grid();
+            cd = new ColumnDefinition();
+            cd.Width = GridLength.Auto;
+            this.descGrid.ColumnDefinitions.Add(cd);
+            this.descGrid.ColumnDefinitions.Add(new ColumnDefinition());
+            rd = new RowDefinition();
+            rd.Height = GridLength.Auto;
+            this.descGrid.RowDefinitions.Add(rd);
+            lbl = new Label();
+            lbl.Content = "Title:";
+            Grid.SetRow(lbl, 0);
+            Grid.SetColumn(lbl, 0);
+            this.descGrid.Children.Add(lbl);
+            this.titleBox = new Entry();
+            this.titleBox.Text = this.evt.title;
+            Grid.SetRow(this.titleBox, 0);
+            Grid.SetColumn(this.titleBox, 1);
+            this.descGrid.Children.Add(this.titleBox);
+            rd = new RowDefinition();
+            rd.Height = GridLength.Auto;
+            this.descGrid.RowDefinitions.Add(rd);
+            lbl = new Label();
+            lbl.Content = "Description:";
+            Grid.SetRow(lbl, 1);
+            Grid.SetColumn(lbl, 0);
+            Grid.SetColumnSpan(lbl, 2);
+            this.descGrid.Children.Add(lbl);
+            this.descGrid.RowDefinitions.Add(new RowDefinition());
+            this.descBox = new Entry();
+            this.descBox.AcceptsReturn = true;
+            this.descBox.MinLines = 5;
+            this.descBox.TextWrapping = TextWrapping.Wrap;
+            this.descBox.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
+            this.descBox.Text = this.evt.description;
+            Grid.SetRow(this.descBox, 2);
+            Grid.SetColumn(this.descBox, 0);
+            Grid.SetColumnSpan(this.descBox, 2);
+            this.descGrid.Children.Add(this.descBox);
+/////
+//
+            //[notes label] if this.evt.canViewNotes(player)
+            //[notes box] if this.evt.canViewNotes(player) (deal with notesBox if not canEdit)
+//
+/////
+            grp.Content = this.descGrid;
+            Grid.SetRow(grp, 1);
+            Grid.SetColumn(grp, 0);
+            Grid.SetColumnSpan(grp, 3);
+            this.mainGrid.Children.Add(grp);
+            rd = new RowDefinition();
+            rd.Height = GridLength.Auto;
+            this.mainGrid.RowDefinitions.Add(rd);
+            GridSplitter spl = new GridSplitter();
+            spl.HorizontalAlignment = HorizontalAlignment.Stretch;
+            spl.VerticalAlignment = VerticalAlignment.Center;
+            spl.Height = 2;
+            Grid.SetRow(spl, 2);
+            Grid.SetColumn(spl, 0);
+            Grid.SetColumnSpan(spl, 3);
+            this.mainGrid.Children.Add(spl);
+            rd = new RowDefinition();
+            rd.Height = new GridLength(1, GridUnitType.Star);
+            this.mainGrid.RowDefinitions.Add(rd);
+            grp = new GroupBox();
+            grp.Header = "Results";
+            this.resGrid = new Grid();
+/////
+//
+            //interface for results: list, add, edit, remove
+//
+/////
+            grp.Content = this.resGrid;
+            Grid.SetRow(grp, 3);
+            Grid.SetColumn(grp, 0);
+            Grid.SetColumnSpan(grp, 3);
+            this.mainGrid.Children.Add(grp);
+            rd = new RowDefinition();
+            rd.Height = GridLength.Auto;
+            this.mainGrid.RowDefinitions.Add(rd);
+            spl = new GridSplitter();
+            spl.HorizontalAlignment = HorizontalAlignment.Stretch;
+            spl.VerticalAlignment = VerticalAlignment.Center;
+            spl.Height = 2;
+            Grid.SetRow(spl, 4);
+            Grid.SetColumn(spl, 0);
+            Grid.SetColumnSpan(spl, 3);
+            this.mainGrid.Children.Add(spl);
+            rd = new RowDefinition();
+            rd.Height = new GridLength(1, GridUnitType.Star);
+            this.mainGrid.RowDefinitions.Add(rd);
+            grp = new GroupBox();
+            grp.Header = "Admin";
+            this.adminGrid = new Grid();
+/////
+//
+            //[owner label] [owner box] [claim button] [divider] [virtual checkbox]
+            //view/edit permissions interface
+//
+/////
+            grp.Content = this.adminGrid;
+            Grid.SetRow(grp, 5);
+            Grid.SetColumn(grp, 0);
+            Grid.SetColumnSpan(grp, 3);
+            this.mainGrid.Children.Add(grp);
+            rd = new RowDefinition();
+            rd.Height = GridLength.Auto;
+            this.mainGrid.RowDefinitions.Add(rd);
+            if (canEdit) {
+                Button okBut = new Button();
+                okBut.Content = "OK";
+                okBut.Click += this.doOk;
+                Grid.SetRow(okBut, 6);
+                Grid.SetColumn(okBut, 1);
+                this.mainGrid.Children.Add(okBut);
+            }
+            Button cancelBut = new Button();
+            cancelBut.Content = "Cancel";
+            cancelBut.Click += this.doCancel;
+            Grid.SetRow(cancelBut, 6);
+            Grid.SetColumn(cancelBut, 2);
+            this.mainGrid.Children.Add(cancelBut);
+            if (!canEdit) {
+                tsBut.IsEnabled = false;
+                this.titleBox.IsReadOnly = true;
+                this.descBox.IsReadOnly = true;
+/////
+//
+                //disable other edit stuff here
+//
+/////
+            }
+            this.Content = this.mainGrid;
+        }
+
+        protected void setStart(object sender, RoutedEventArgs e) {
+            Timestamp t = Calendars.askTimestamp(this.calendarName, "Event Start", this.timestamp - this.evt.duration, this);
+            if (t == null) { return; }
+            this.startBox.Text = t.toString(true, true);
+            this.evt.duration = this.timestamp - t;
+            this.durBox.Text = this.evt.duration.toString(true);
+        }
+
+        protected void setEnd(object sender, RoutedEventArgs e) {
+            Timestamp t = Calendars.askTimestamp(this.calendarName, "Event End", this.timestamp, this);
+            if (t == null) { return; }
+            Timestamp startTime = this.timestamp - this.evt.duration;
+            this.timestamp = t;
+            this.endBox.Text = this.timestamp.toString(true, true);
+            this.evt.duration = this.timestamp - startTime;
+            this.durBox.Text = this.evt.duration.toString(true);
+        }
+
+        protected void setDuration(object sender, RoutedEventArgs e) {
+            TimeSpan s = Calendars.askTimeSpan("Event Duration", this.evt.duration, this);
+            if (s == null) { return; }
+            Timestamp startTime = this.timestamp - this.evt.duration;
+            this.evt.duration = s;
+            this.timestamp = startTime + this.evt.duration;
+            this.endBox.Text = this.timestamp.toString(true, true);
+            this.durBox.Text = this.evt.duration.toString(true);
+        }
+
+        protected void doOk(object sender, RoutedEventArgs e) {
+            this.valid = true;
+            this.Close();
+        }
+
+        protected void doCancel(object sender, RoutedEventArgs e) {
+            this.Close();
         }
     }
 }
