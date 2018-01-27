@@ -105,7 +105,7 @@ namespace DeCamp {
             if (this.campaign == null) { return; }
 /////
 //
-            EventDialog dlg = new EventDialog(new Event(Campaign.gmKey), this.campaign.getTimestamp(), this.campaign.calendarName, "New Event", Campaign.gmKey, this);
+            EventDialog dlg = new EventDialog(this.campaign, new Event("Generic", Campaign.gmKey), this.campaign.getTimestamp(), "New Event", Campaign.gmKey, this);
             dlg.ShowDialog();
 //
 /////

@@ -10,13 +10,13 @@ namespace DeCamp {
     }
 
     class DnD35CombatEvent : Event {
-        public DnD35CombatEvent(String creator, EventResult parent = null) : base(creator, parent) { }
+        public DnD35CombatEvent(String type, String creator, EventResult parent = null) : base(type, creator, parent) { }
         //...
     }
 
     class DnD35 : Ruleset {
         public DnD35() {
-            this.events["Combat"] = (creator, parent) => new DnD35CombatEvent(creator, parent);
+            this.events["Combat"] = (type, creator, parent) => new DnD35CombatEvent(type, creator, parent);
         }
 
         public override Character newCharacter() {

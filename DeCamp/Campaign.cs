@@ -61,7 +61,7 @@ namespace DeCamp {
         private readonly Ruleset ruleset;
         private Timestamp now;
         private CampaignState state;
-        private SortedDictionary<Timestamp, EventBucket> timeline;
+        private SortedDictionary<Timestamp, List<Event>> timeline;
 
         public Campaign(String name, String gm, String calendar, String ruleset) {
             this.name = name;

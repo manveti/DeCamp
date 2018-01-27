@@ -7,6 +7,7 @@ using GUIx;
 
 namespace DeCamp {
     class Event {
+        public readonly String type;
         public String owner;
         public EventResult parent;
         public TimeSpan duration;
@@ -14,10 +15,11 @@ namespace DeCamp {
         private HashSet<String> viewers;
         private HashSet<String> editors;
         public String title, description, notes;
-        //isVirtual
+        public bool isVirtual;
         public List<EventResult> results;
 
-        public Event(String creator, EventResult parent = null) {
+        public Event(String type, String creator, EventResult parent = null) {
+            this.type = type;
             this.owner = creator;
             this.parent = parent;
             this.timestamp = DateTime.UtcNow;
@@ -45,12 +47,14 @@ namespace DeCamp {
     }
 
     abstract class EventResult {
+        public readonly String type;
         public String creator;
         public Event parent;
         public String summary;
         public Event subEvent;
 
-        public EventResult(String creator, Event parent, String summary) {
+        public EventResult(String type, String creator, Event parent, String summary) {
+            this.type = type;
             this.creator = creator;
             this.parent = parent;
             this.summary = summary;
@@ -64,7 +68,7 @@ namespace DeCamp {
         public Character character;
         public String charId;
 
-        public CharacterAddResult(String creator, Event parent, String summary, Character character) : base(creator, parent, summary) {
+        public CharacterAddResult(String type, String creator, Event parent, String summary, Character character) : base(type, creator, parent, summary) {
             this.character = character;
         }
 
@@ -81,7 +85,7 @@ namespace DeCamp {
         public Character character;
         public String charId;
 
-        public CharacterRemoveResult(String creator, Event parent, String summary, String charId) : base(creator, parent, summary) {
+        public CharacterRemoveResult(String type, String creator, Event parent, String summary, String charId) : base(type, creator, parent, summary) {
             this.charId = charId;
         }
 
@@ -146,7 +150,7 @@ namespace DeCamp {
         public String charId;
         public List<AttributeMod> modifications;
 
-        public CharacterEditResult(String creator, Event parent, String summary, String charId, List<AttributeMod> mods) : base(creator, parent, summary) {
+        public CharacterEditResult(String type, String creator, Event parent, String summary, String charId, List<AttributeMod> mods) : base(type, creator, parent, summary) {
             this.charId = charId;
             this.modifications = mods;
         }
@@ -169,55 +173,20 @@ namespace DeCamp {
     //add/remove/edit party resources
     //add/remove/edit todo
 
-    class EventBucket {
-        public List<Event> events;
-        public List<Event> virtualEvents;
-
-        public void addEvent(Event e, bool isVirtual = false) {
-            this.getList(isVirtual).Add(e);
-        }
-
-        public void insertEvent(int i, Event e, bool isVirtual = false) {
-            this.getList(isVirtual).Insert(i, e);
-        }
-
-        public void removeEvent(int i, bool isVirtual = false) {
-            this.getList(isVirtual).RemoveAt(i);
-        }
-
-        public void moveEvent(int fromIdx, int toIdx, bool wasVirtual = false, bool isVirtual = false) {
-            if ((fromIdx == toIdx) && (wasVirtual == isVirtual)) { return; }
-            Event e = this.getList(wasVirtual)[fromIdx];
-            this.removeEvent(fromIdx, wasVirtual);
-            this.insertEvent(toIdx, e, isVirtual);
-        }
-
-        protected List<Event> getList(bool isVirtual) {
-            if (isVirtual) {
-                if (this.virtualEvents == null) { this.virtualEvents = new List<Event>(); }
-                return this.virtualEvents;
-            }
-            else {
-                if (this.events == null) { this.events = new List<Event>(); }
-                return this.events;
-            }
-        }
-    }
-
 
     class EventDialog : Window {
         public Event evt;
         public Timestamp timestamp;
-        public readonly String calendarName;
+        protected readonly Campaign campaign;
         protected Grid mainGrid, parentGrid, descGrid, resGrid, adminGrid;
         protected TextBox startBox, endBox, durBox, tsBox;
         protected Entry titleBox, descBox, notesBox;
         public bool valid = false;
 
-        public EventDialog(Event evt, Timestamp timestamp, String calendar, String title, String player, Window owner = null) {
+        public EventDialog(Campaign campaign, Event evt, Timestamp timestamp, String title, String player, Window owner = null) {
             this.evt = evt;
             this.timestamp = timestamp;
-            this.calendarName = calendar;
+            this.campaign = campaign;
             this.WindowStartupLocation = WindowStartupLocation.CenterOwner;
             this.SizeToContent = SizeToContent.WidthAndHeight;
             this.Title = title;
@@ -495,7 +464,7 @@ namespace DeCamp {
         }
 
         protected void setStart(object sender, RoutedEventArgs e) {
-            Timestamp t = Calendars.askTimestamp(this.calendarName, "Event Start", this.timestamp - this.evt.duration, this);
+            Timestamp t = Calendars.askTimestamp(this.campaign.calendarName, "Event Start", this.timestamp - this.evt.duration, this);
             if (t == null) { return; }
             this.startBox.Text = t.toString(true, true);
             this.evt.duration = this.timestamp - t;
@@ -503,7 +472,7 @@ namespace DeCamp {
         }
 
         protected void setEnd(object sender, RoutedEventArgs e) {
-            Timestamp t = Calendars.askTimestamp(this.calendarName, "Event End", this.timestamp, this);
+            Timestamp t = Calendars.askTimestamp(this.campaign.calendarName, "Event End", this.timestamp, this);
             if (t == null) { return; }
             Timestamp startTime = this.timestamp - this.evt.duration;
             this.timestamp = t;

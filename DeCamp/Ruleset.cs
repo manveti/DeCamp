@@ -6,8 +6,8 @@ using System.Threading.Tasks;
 
 namespace DeCamp {
     class Ruleset {
-        protected SortedDictionary<String, Func<String, EventResult, Event>> events = new SortedDictionary<string, Func<String, EventResult, Event>>() {
-            { "Generic", (creator, parent) => new Event(creator, parent) }
+        protected SortedDictionary<String, Func<String, String, EventResult, Event>> events = new SortedDictionary<string, Func<String, String, EventResult, Event>>() {
+            { "Generic", (type, creator, parent) => new Event(type, creator, parent) }
         };
 
         public virtual Character newCharacter() {
@@ -20,7 +20,7 @@ namespace DeCamp {
 
         public virtual Event newEvent(String type, String creator, EventResult parent = null) {
             if (!this.events.ContainsKey(type)) { throw new ArgumentException("Unknown event type: " + type); }
-            return this.events[type].Invoke(creator, parent);
+            return this.events[type].Invoke(type, creator, parent);
         }
 
         //...
