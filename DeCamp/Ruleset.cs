@@ -1,13 +1,31 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Reflection;
+using System.Windows;
 
 namespace DeCamp {
     class Ruleset {
-        protected SortedDictionary<String, Func<String, String, EventResult, Event>> events = new SortedDictionary<string, Func<String, String, EventResult, Event>>() {
-            { "Generic", (type, creator, parent) => new Event(type, creator, parent) }
+        protected class EventImpl {
+            private ConstructorInfo evt, dlg;
+            public Func<Campaign, Event, Timestamp, String, String, Window, EventDialog> dialog;
+
+            public EventImpl(Type eventType, Type dialogType) {
+                this.evt = eventType.GetConstructor(new Type[] { typeof(String), typeof(String), typeof(EventResult) });
+                this.dlg = dialogType.GetConstructor(new Type[] { typeof(Campaign), typeof(Event), typeof(Timestamp), typeof(String), typeof(String), typeof(Window) });
+            }
+
+            public Event newEvent(String type, String creator, EventResult parent) {
+                return (Event)(this.evt.Invoke(new object[] { type, creator, parent }));
+            }
+
+            public EventDialog newDialog(Campaign campaign, Event evt, Timestamp timestamp, String title, String player, Window owner = null) {
+                object[] args = new object[] { campaign, evt, timestamp, title, player, owner };
+                return (EventDialog)(this.dlg.Invoke(args));
+            }
+        }
+
+        protected SortedDictionary<String, EventImpl> events = new SortedDictionary<String, EventImpl>() {
+            { "Generic", new EventImpl(typeof(Event), typeof(EventDialog)) }
         };
 
         public virtual Character newCharacter() {
@@ -20,7 +38,14 @@ namespace DeCamp {
 
         public virtual Event newEvent(String type, String creator, EventResult parent = null) {
             if (!this.events.ContainsKey(type)) { throw new ArgumentException("Unknown event type: " + type); }
-            return this.events[type].Invoke(type, creator, parent);
+            return this.events[type].newEvent(type, creator, parent);
+        }
+
+        public virtual EventDialog viewEvent(Campaign campaign, Event evt, Timestamp timestamp, String title, String player, Window owner = null) {
+            EventDialog dlg = this.events[evt.type].newDialog(campaign, evt, timestamp, title, player, owner);
+            dlg.ShowDialog();
+            if (!dlg.valid) { return null; }
+            return dlg;
         }
 
         //...

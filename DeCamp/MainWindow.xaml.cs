@@ -103,12 +103,25 @@ namespace DeCamp {
 
         public void newEvent(object sender, RoutedEventArgs e) {
             if (this.campaign == null) { return; }
+            Ruleset ruleset = this.campaign.getRuleset();
+            String eventType;
+            String[] eventTypes = ruleset.getEventTypes().ToArray();
+            if (eventTypes.Length == 0) { return; }
+            if (eventTypes.Length > 1) {
+                eventType = SimpleDialog.askList("New Event", "Event Type:", ruleset.getEventTypes().ToArray(), owner: this);
+            }
+            else {
+                eventType = eventTypes[0];
+            }
 /////
 //
-            EventDialog dlg = new EventDialog(this.campaign, new Event("Generic", Campaign.gmKey), this.campaign.getTimestamp(), "New Event", Campaign.gmKey, this);
-            dlg.ShowDialog();
+            String player = "me";
 //
 /////
+            EventDialog dlg = ruleset.viewEvent(this.campaign, ruleset.newEvent(eventType, player), this.campaign.getTimestamp(), "New Event", player, this);
+            if ((dlg == null) || (dlg.timestamp == null) || (dlg.evt == null)) { return; }
+            this.campaign.addEvent(dlg.timestamp, dlg.evt);
+            this.showCampaign();
         }
 
         //other timeline handlers

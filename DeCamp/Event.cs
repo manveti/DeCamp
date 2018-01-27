@@ -12,8 +12,8 @@ namespace DeCamp {
         public EventResult parent;
         public TimeSpan duration;
         public DateTime timestamp;
-        private HashSet<String> viewers;
-        private HashSet<String> editors;
+        protected HashSet<String> viewers;
+        protected HashSet<String> editors;
         public String title, description, notes;
         public bool isVirtual;
         public List<EventResult> results;
@@ -38,12 +38,21 @@ namespace DeCamp {
         }
 
         public virtual void apply(CampaignState s) {
+            if (this.results == null) { return; }
             foreach (EventResult res in this.results) { res.apply(s); }
         }
 
         public virtual void revert(CampaignState s) {
+            if (this.results == null) { return; }
             foreach (EventResult res in this.results) { res.revert(s); }
         }
+
+        public virtual void addResult(EventResult r) {
+            if (this.results == null) { this.results = new List<EventResult>(); }
+            this.results.Add(r);
+        }
+
+        //insert, move, delete
     }
 
     abstract class EventResult {

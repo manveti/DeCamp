@@ -16,7 +16,7 @@ namespace DeCamp {
 
     class DnD35 : Ruleset {
         public DnD35() {
-            this.events["Combat"] = (type, creator, parent) => new DnD35CombatEvent(type, creator, parent);
+            this.events["Combat"] = new EventImpl(typeof(DnD35CombatEvent), typeof(EventDialog));
         }
 
         public override Character newCharacter() {

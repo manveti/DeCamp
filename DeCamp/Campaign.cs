@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace DeCamp {
     class CampaignState {
-        private Timestamp timestamp;
+        public Timestamp timestamp;
         private Dictionary<String, Character> party;
         //loot
         //todo
@@ -73,6 +73,7 @@ namespace DeCamp {
             this.ruleset = Rulesets.newRuleset(this.rulesetName);
             this.now = this.calendar.defaultTimestamp();
             this.state = new CampaignState(this.now);
+            this.timeline = new SortedDictionary<Timestamp, List<Event>>();
         }
 
         public ICollection<String> getPlayers() {
@@ -107,6 +108,11 @@ namespace DeCamp {
 
         //get/change gm
         //future: change calendar
+
+        public Ruleset getRuleset() {
+            return this.ruleset;
+        }
+
         //future: change ruleset
 
         public Timestamp getTimestamp() {
@@ -135,10 +141,50 @@ namespace DeCamp {
             return this.state.getCharacter(key);
         }
 
-        //...
+        //other state stuff
+
+        public void advanceTo(Timestamp t) {
+            if (this.state.timestamp >= t) { return; }
+            foreach (Timestamp ts in this.timeline.Keys) {
+                if (ts <= this.state.timestamp) { continue; }
+                if (ts > t) { break; }
+                foreach (Event e in this.timeline[ts]) { e.apply(this.state); }
+                this.state.timestamp = ts;
+            }
+        }
+
+        public void rewindTo(Timestamp t) {
+            if (this.state.timestamp <= t) { return; }
+            Timestamp[] timestamps = this.timeline.Keys.ToArray();
+            timestamps.Reverse();
+            foreach (Timestamp ts in timestamps) {
+                if (ts > this.state.timestamp) { continue; }
+                if (ts <= t) { break; }
+                Event[] events = this.timeline[ts].ToArray();
+                events.Reverse();
+                foreach (Event e in events) { e.revert(this.state); }
+                this.state.timestamp = ts;
+            }
+        }
+
+        public void addEvent(Timestamp t, Event e) {
+            if (this.state.timestamp > t) {
+                this.rewindTo(t);
+            }
+            if (!this.timeline.ContainsKey(t)) { this.timeline[t] = new List<Event>(); }
+            this.timeline[t].Add(e);
+            e.apply(this.state);
+            if (this.now < t) { this.now = t; }
+            if (this.state.timestamp < this.now) {
+                this.advanceTo(this.now);
+            }
+        }
+
+        //other timeline stuff
 
         private void handleTimeChange() {
-            //update timeline, todo, etc. to deal with the fact that the time just changed
+            if (this.now > this.state.timestamp) { this.advanceTo(this.now); }
+            if (this.now < this.state.timestamp) { this.rewindTo(this.now); }
         }
     }
 }
