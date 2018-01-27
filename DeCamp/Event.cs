@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -12,8 +13,8 @@ namespace DeCamp {
         public EventResult parent;
         public TimeSpan duration;
         public DateTime timestamp;
-        protected HashSet<String> viewers;
-        protected HashSet<String> editors;
+        public HashSet<String> viewers;
+        public HashSet<String> editors;
         public String title, description, notes;
         public bool isVirtual;
         public List<EventResult> results;
@@ -30,21 +31,41 @@ namespace DeCamp {
         }
 
         public virtual bool canViewNotes(String player) {
-            return (player == this.owner) || (player == Campaign.gmKey);
+            return (player == this.owner);
         }
 
         public virtual bool canEdit(String player) {
             return (player == this.owner) || (player == Campaign.gmKey) || (this.editors == null) || (this.editors.Contains(player));
         }
 
-        public virtual void apply(CampaignState s) {
-            if (this.results == null) { return; }
-            foreach (EventResult res in this.results) { res.apply(s); }
+        public virtual bool canAssign(String player) {
+            return (player == Campaign.gmKey);
         }
 
-        public virtual void revert(CampaignState s) {
+        public virtual bool canClaim(String player) {
+            return (this.owner == null);
+        }
+
+        public virtual bool canSetPermissions(String player) {
+            return (player == this.owner) || (player == Campaign.gmKey);
+        }
+
+        public virtual void apply(CampaignState s, bool doVirtual = false) {
+            if ((this.isVirtual) && (!doVirtual)) { return; }
             if (this.results == null) { return; }
-            foreach (EventResult res in this.results) { res.revert(s); }
+            foreach (EventResult res in this.results) {
+                res.apply(s);
+                if (res.subEvent != null) { res.subEvent.apply(s, doVirtual); }
+            }
+        }
+
+        public virtual void revert(CampaignState s, bool doVirtual = false) {
+            if ((this.isVirtual) && (!doVirtual)) { return; }
+            if (this.results == null) { return; }
+            foreach (EventResult res in this.results) {
+                if (res.subEvent != null) { res.subEvent.revert(s, doVirtual); }
+                res.revert(s);
+            }
         }
 
         public virtual void addResult(EventResult r) {
@@ -188,8 +209,10 @@ namespace DeCamp {
         public Timestamp timestamp;
         protected readonly Campaign campaign;
         protected Grid mainGrid, parentGrid, descGrid, resGrid, adminGrid;
-        protected TextBox startBox, endBox, durBox, tsBox;
+        protected TextBox startBox, endBox, durBox, tsBox, ownerBox;
         protected Entry titleBox, descBox, notesBox;
+        protected CheckBox virtBox;
+        protected ListBox viewersLst, editorsLst;
         public bool valid = false;
 
         public EventDialog(Campaign campaign, Event evt, Timestamp timestamp, String title, String player, Window owner = null) {
@@ -203,7 +226,9 @@ namespace DeCamp {
                 this.Owner = owner;
             }
             ColumnDefinition cd;
+            GroupBox grp;
             Label lbl;
+            Grid g;
             bool canEdit = this.evt.canEdit(player);
             this.mainGrid = new Grid();
             this.mainGrid.ColumnDefinitions.Add(new ColumnDefinition());
@@ -216,7 +241,7 @@ namespace DeCamp {
             RowDefinition rd = new RowDefinition();
             rd.Height = GridLength.Auto;
             this.mainGrid.RowDefinitions.Add(rd);
-            GroupBox grp = new GroupBox();
+            grp = new GroupBox();
             this.parentGrid = new Grid();
             if (this.timestamp != null) {
                 grp.Header = "Date/Time";
@@ -297,7 +322,7 @@ namespace DeCamp {
                 Grid.SetColumn(lbl, 0);
                 this.parentGrid.Children.Add(lbl);
             }
-            Grid g = new Grid();
+            g = new Grid();
             rd = new RowDefinition();
             rd.Height = GridLength.Auto;
             this.parentGrid.RowDefinitions.Add(rd);
@@ -426,17 +451,174 @@ namespace DeCamp {
             Grid.SetColumnSpan(spl, 3);
             this.mainGrid.Children.Add(spl);
             rd = new RowDefinition();
-            rd.Height = new GridLength(1, GridUnitType.Star);
+            rd.Height = new GridLength(2, GridUnitType.Star);
             this.mainGrid.RowDefinitions.Add(rd);
             grp = new GroupBox();
             grp.Header = "Admin";
             this.adminGrid = new Grid();
+            this.adminGrid.ColumnDefinitions.Add(new ColumnDefinition());
+            this.adminGrid.ColumnDefinitions.Add(new ColumnDefinition());
+            rd = new RowDefinition();
+            rd.Height = GridLength.Auto;
+            this.adminGrid.RowDefinitions.Add(rd);
+            g = new Grid();
+            cd = new ColumnDefinition();
+            cd.Width = GridLength.Auto;
+            g.ColumnDefinitions.Add(cd);
+            g.ColumnDefinitions.Add(new ColumnDefinition());
+            cd = new ColumnDefinition();
+            cd.Width = GridLength.Auto;
+            g.ColumnDefinitions.Add(cd);
+            rd = new RowDefinition();
+            rd.Height = GridLength.Auto;
+            g.RowDefinitions.Add(rd);
+            Button ownerBut = new Button();
+            ownerBut.Content = "Owner:";
+            if ((!this.evt.canAssign(player)) && (!this.evt.canClaim(player))) {
+                ownerBut.IsEnabled = false;
+            }
 /////
 //
-            //[owner label] [owner box] [claim button] [divider] [virtual checkbox]
-            //view/edit permissions interface
+            //button click handler
 //
 /////
+            Grid.SetRow(ownerBut, 0);
+            Grid.SetColumn(ownerBut, 0);
+            g.Children.Add(ownerBut);
+            this.ownerBox = new TextBox();
+            this.ownerBox.IsReadOnly = true;
+            this.ownerBox.Text = this.getPlayer(this.evt.owner);
+            Grid.SetRow(this.ownerBox, 0);
+            Grid.SetColumn(this.ownerBox, 1);
+            g.Children.Add(this.ownerBox);
+            this.virtBox = new CheckBox();
+            this.virtBox.Content = "Virtual";
+            this.virtBox.VerticalAlignment = VerticalAlignment.Center;
+            this.virtBox.IsChecked = evt.isVirtual;
+            Grid.SetRow(this.virtBox, 0);
+            Grid.SetColumn(this.virtBox, 2);
+            g.Children.Add(this.virtBox);
+            Grid.SetRow(g, 0);
+            Grid.SetColumn(g, 0);
+            Grid.SetColumnSpan(g, 2);
+            this.adminGrid.Children.Add(g);
+            this.adminGrid.RowDefinitions.Add(new RowDefinition());
+            GroupBox subGrp = new GroupBox();
+            subGrp.Header = "Viewers";
+            Grid subGrid = new Grid();
+            subGrid.ColumnDefinitions.Add(new ColumnDefinition());
+            subGrid.ColumnDefinitions.Add(new ColumnDefinition());
+            subGrid.RowDefinitions.Add(new RowDefinition());
+            this.viewersLst = new ListBox();
+            this.viewersLst.MinHeight = 32;
+            this.viewersLst.Items.SortDescriptions.Add(new SortDescription("", ListSortDirection.Ascending));
+            if (this.evt.viewers == null) {
+                this.viewersLst.Items.Add("<Everyone>");
+            }
+            else {
+                foreach (String p in this.evt.viewers) {
+                    this.viewersLst.Items.Add(this.getPlayer(p));
+                }
+            }
+            this.viewersLst.Items.Refresh();
+            Grid.SetRow(this.viewersLst, 0);
+            Grid.SetColumn(this.viewersLst, 0);
+            Grid.SetColumnSpan(this.viewersLst, 2);
+            subGrid.Children.Add(this.viewersLst);
+            rd = new RowDefinition();
+            rd.Height = GridLength.Auto;
+            subGrid.RowDefinitions.Add(rd);
+/////
+//
+            //button click handlers
+            Button viewerAddBut = new Button();
+            viewerAddBut.Content = "Add...";
+            Grid.SetRow(viewerAddBut, 1);
+            Grid.SetColumn(viewerAddBut, 0);
+            subGrid.Children.Add(viewerAddBut);
+            Button viewerRemBut = new Button();
+            viewerRemBut.Content = "Remove";
+            Grid.SetRow(viewerRemBut, 1);
+            Grid.SetColumn(viewerRemBut, 1);
+            subGrid.Children.Add(viewerRemBut);
+            rd = new RowDefinition();
+            rd.Height = GridLength.Auto;
+            subGrid.RowDefinitions.Add(rd);
+            Button viewerAllBut = new Button();
+            viewerAllBut.Content = "Everyone";
+            Grid.SetRow(viewerAllBut, 2);
+            Grid.SetColumn(viewerAllBut, 0);
+            subGrid.Children.Add(viewerAllBut);
+            Button viewerNoneBut = new Button();
+            viewerNoneBut.Content = "No One";
+            viewerNoneBut.ToolTip = "Owner and GM will still be able to view";
+//
+/////
+            Grid.SetRow(viewerNoneBut, 2);
+            Grid.SetColumn(viewerNoneBut, 1);
+            subGrid.Children.Add(viewerNoneBut);
+            subGrp.Content = subGrid;
+            Grid.SetRow(subGrp, 1);
+            Grid.SetColumn(subGrp, 0);
+            this.adminGrid.Children.Add(subGrp);
+            subGrp = new GroupBox();
+            subGrp.Header = "Editors";
+            subGrid = new Grid();
+            subGrid.ColumnDefinitions.Add(new ColumnDefinition());
+            subGrid.ColumnDefinitions.Add(new ColumnDefinition());
+            subGrid.RowDefinitions.Add(new RowDefinition());
+            this.editorsLst = new ListBox();
+            this.editorsLst.MinHeight = 32;
+            this.editorsLst.Items.SortDescriptions.Add(new SortDescription("", ListSortDirection.Ascending));
+            if (this.evt.editors == null) {
+                this.editorsLst.Items.Add("<Everyone>");
+            }
+            else {
+                foreach (String p in this.evt.editors) {
+                    this.editorsLst.Items.Add(this.getPlayer(p));
+                }
+            }
+            this.editorsLst.Items.Refresh();
+            Grid.SetRow(this.editorsLst, 0);
+            Grid.SetColumn(this.editorsLst, 0);
+            Grid.SetColumnSpan(this.editorsLst, 2);
+            subGrid.Children.Add(this.editorsLst);
+            rd = new RowDefinition();
+            rd.Height = GridLength.Auto;
+            subGrid.RowDefinitions.Add(rd);
+/////
+//
+            //button click handlers
+            Button editorAddBut = new Button();
+            editorAddBut.Content = "Add...";
+            Grid.SetRow(editorAddBut, 1);
+            Grid.SetColumn(editorAddBut, 0);
+            subGrid.Children.Add(editorAddBut);
+            Button editorRemBut = new Button();
+            editorRemBut.Content = "Remove";
+            Grid.SetRow(editorRemBut, 1);
+            Grid.SetColumn(editorRemBut, 1);
+            subGrid.Children.Add(editorRemBut);
+            rd = new RowDefinition();
+            rd.Height = GridLength.Auto;
+            subGrid.RowDefinitions.Add(rd);
+            Button editorAllBut = new Button();
+            editorAllBut.Content = "Everyone";
+            Grid.SetRow(editorAllBut, 2);
+            Grid.SetColumn(editorAllBut, 0);
+            subGrid.Children.Add(editorAllBut);
+            Button editorNoneBut = new Button();
+            editorNoneBut.Content = "No One";
+            editorNoneBut.ToolTip = "Owner and GM will still be able to edit";
+//
+/////
+            Grid.SetRow(editorNoneBut, 2);
+            Grid.SetColumn(editorNoneBut, 1);
+            subGrid.Children.Add(editorNoneBut);
+            subGrp.Content = subGrid;
+            Grid.SetRow(subGrp, 1);
+            Grid.SetColumn(subGrp, 1);
+            this.adminGrid.Children.Add(subGrp);
             grp.Content = this.adminGrid;
             Grid.SetRow(grp, 5);
             Grid.SetColumn(grp, 0);
@@ -465,9 +647,25 @@ namespace DeCamp {
                 this.descBox.IsReadOnly = true;
 /////
 //
-                //disable other edit stuff here
+                //disable results edit stuff
 //
 /////
+                this.virtBox.IsEnabled = false;
+/////
+//
+                //disable other edit stuff
+//
+/////
+            }
+            if (!this.evt.canSetPermissions(player)) {
+                viewerAddBut.IsEnabled = false;
+                viewerRemBut.IsEnabled = false;
+                viewerAllBut.IsEnabled = false;
+                viewerNoneBut.IsEnabled = false;
+                editorAddBut.IsEnabled = false;
+                editorRemBut.IsEnabled = false;
+                editorAllBut.IsEnabled = false;
+                editorNoneBut.IsEnabled = false;
             }
             this.Content = this.mainGrid;
         }
@@ -501,12 +699,26 @@ namespace DeCamp {
         }
 
         protected void doOk(object sender, RoutedEventArgs e) {
+            this.evt.title = this.titleBox.Text;
+            this.evt.description = this.descBox.Text;
+/////
+//
+            //this.evt.notes = this.notesBox.Text;
+//
+/////
+            this.evt.isVirtual = (bool)(this.virtBox.IsChecked);
             this.valid = true;
             this.Close();
         }
 
         protected void doCancel(object sender, RoutedEventArgs e) {
             this.Close();
+        }
+
+        public virtual String getPlayer(String key) {
+            if (key == null) { return "<System>"; }
+            if (key == Campaign.gmKey) { return "<GM>"; }
+            return this.campaign.getPlayer(key).name;
         }
     }
 }

@@ -113,11 +113,7 @@ namespace DeCamp {
             else {
                 eventType = eventTypes[0];
             }
-/////
-//
-            String player = "me";
-//
-/////
+            String player = this.getPlayerOrGm();
             EventDialog dlg = ruleset.viewEvent(this.campaign, ruleset.newEvent(eventType, player), this.campaign.getTimestamp(), "New Event", player, this);
             if ((dlg == null) || (dlg.timestamp == null) || (dlg.evt == null)) { return; }
             this.campaign.addEvent(dlg.timestamp, dlg.evt);
@@ -127,6 +123,16 @@ namespace DeCamp {
         //other timeline handlers
         //party handlers
         //journal handlers
+
+        private String getPlayerOrGm() {
+/////
+//
+            String player = "me";
+//
+/////
+            if ((this.campaign != null) && (player == this.campaign.getGm())) { player = Campaign.gmKey; }
+            return player;
+        }
 
         private void showCampaign() {
             if (this.campaign == null) { return; }

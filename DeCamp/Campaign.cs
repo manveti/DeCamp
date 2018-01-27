@@ -106,7 +106,11 @@ namespace DeCamp {
             this.players.Remove(key);
         }
 
-        //get/change gm
+        public String getGm() {
+            return this.gm;
+        }
+
+        //change gm
         //future: change calendar
 
         public Ruleset getRuleset() {
