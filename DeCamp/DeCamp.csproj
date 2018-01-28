@@ -55,9 +55,16 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="DnD35.cs" />
+    <Compile Include="EventDialog.xaml.cs">
+      <DependentUpon>EventDialog.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Player.cs" />
     <Compile Include="Ruleset.cs" />
     <Compile Include="Timestamp.cs" />
+    <Page Include="EventDialog.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>

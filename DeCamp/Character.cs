@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace DeCamp {
-    class Attribute {
+    public class Attribute {
         public enum Type { BOOL, INT, FLOAT, STRING };
 
         public Type type;
@@ -47,7 +47,7 @@ namespace DeCamp {
         }
     }
 
-    class Character {
+    public class Character {
         public String player;
         public String name;
         protected Dictionary<String, Attribute> attributes;

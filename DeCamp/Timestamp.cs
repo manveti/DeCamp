@@ -6,7 +6,7 @@ using System.Windows.Controls;
 using GUIx;
 
 namespace DeCamp {
-    class TimeSpan {
+    public class TimeSpan {
         public readonly Calendar calendar;
         public readonly Decimal value;
 
@@ -20,7 +20,7 @@ namespace DeCamp {
         }
     }
 
-    class Timestamp : IComparable {
+    public class Timestamp : IComparable {
         public readonly Calendar calendar;
         public readonly Decimal value;
         public readonly Calendar.Interval precision;
@@ -99,7 +99,7 @@ namespace DeCamp {
         }
     }
 
-    abstract class Calendar {
+    public abstract class Calendar {
         public enum Interval { year, month, week, day, time, hour, minute, second };
 
         public virtual TimeSpan newTimeSpan(Decimal value) {
@@ -188,7 +188,7 @@ namespace DeCamp {
         public abstract bool spanLengthConstant(Interval unit);
     }
 
-    abstract class DayCalendar : Calendar {
+    public abstract class DayCalendar : Calendar {
         protected Decimal yearDays, monthDays, weekDays;
         protected int dayHours, hourMins, minuteSecs;
         protected String dateFormat;
@@ -319,13 +319,13 @@ namespace DeCamp {
         }
     }
 
-    class CampaignCalendar : DayCalendar {
+    public class CampaignCalendar : DayCalendar {
         public override Timestamp defaultTimestamp() {
             return this.newTimestamp(0, 0, 0, 1, 12, 0, 0, Interval.time);
         }
     }
 
-    class JulianCalendar : DayCalendar {
+    public class JulianCalendar : DayCalendar {
         public override Timestamp defaultTimestamp() {
             return this.newTimestamp(2458119m * this.dayHours * this.hourMins * this.minuteSecs, Interval.time);
         }
@@ -348,7 +348,7 @@ namespace DeCamp {
         }
     }
 
-    abstract class SimpleCalendar : Calendar {
+    public abstract class SimpleCalendar : Calendar {
         public class Month {
             public readonly String name;
             public readonly uint days;
@@ -548,7 +548,7 @@ namespace DeCamp {
         }
     }
 
-    class GreyhawkCalendar : SimpleCalendar {
+    public class GreyhawkCalendar : SimpleCalendar {
         public GreyhawkCalendar() {
             this.months = new Month[]{ new Month("Needfest", 7, true),
                                         new Month("Fireseek", 28),
@@ -631,7 +631,7 @@ namespace DeCamp {
         }
     }
 
-    class EberronCalendar : SimpleCalendar {
+    public class EberronCalendar : SimpleCalendar {
         public EberronCalendar() {
             this.months = new Month[]{ new Month("Zarantyr", 28),
                                         new Month("Olarune", 28),
@@ -668,7 +668,7 @@ namespace DeCamp {
         }
     }
 
-    abstract class LeapCalendar : SimpleCalendar {
+    public abstract class LeapCalendar : SimpleCalendar {
         public uint? leapMonth;
         protected uint cycleYears;
         protected uint cycleLeapDays;
@@ -838,7 +838,7 @@ namespace DeCamp {
         }
     }
 
-    class FRCalendar : LeapCalendar {
+    public class FRCalendar : LeapCalendar {
         public FRCalendar() {
             this.months = new Month[]{ new Month("Hammer", 30),
                                         new Month("Midwinter", 1, true),
@@ -910,7 +910,7 @@ namespace DeCamp {
         }
     }
 
-    class GregorianCalendar : LeapCalendar {
+    public class GregorianCalendar : LeapCalendar {
         public GregorianCalendar() {
             this.months = new Month[]{ new Month("January", 31),
                                         new Month("February", 28),
@@ -953,7 +953,7 @@ namespace DeCamp {
     }
 
 
-    abstract class DatePickerDialog : Window {
+    public abstract class DatePickerDialog : Window {
         protected Calendar calendar;
         protected Grid dateGrid, precisionGrid;
         protected ComboBox precisionBox;
@@ -1062,7 +1062,7 @@ namespace DeCamp {
         }
     }
 
-    class DayPickerDialog : DatePickerDialog {
+    public class DayPickerDialog : DatePickerDialog {
         protected SpinBox dateBox;
 
         public DayPickerDialog(Calendar calendar) : base(calendar) { }
@@ -1096,7 +1096,7 @@ namespace DeCamp {
         }
     }
 
-    class JulianDatePickerDialog : DayPickerDialog {
+    public class JulianDatePickerDialog : DayPickerDialog {
         public JulianDatePickerDialog(Calendar calendar) : base(calendar) { }
 
         protected override void setDefaultValues(Timestamp t) {
@@ -1109,7 +1109,7 @@ namespace DeCamp {
         }
     }
 
-    class DayTimePickerDialog : DayPickerDialog {
+    public class DayTimePickerDialog : DayPickerDialog {
         protected ComboBox hourBox, minBox, secBox;
 
         public DayTimePickerDialog(Calendar calendar) : base(calendar) { }
@@ -1196,7 +1196,7 @@ namespace DeCamp {
         }
     }
 
-    class SimpleDatePickerDialog : DatePickerDialog {
+    public class SimpleDatePickerDialog : DatePickerDialog {
         public enum DateOrder { DMY, MDY, YMD };
 
         DateOrder order;
@@ -1350,7 +1350,7 @@ namespace DeCamp {
         }
     }
 
-    class LeapDatePickerDialog : SimpleDatePickerDialog {
+    public class LeapDatePickerDialog : SimpleDatePickerDialog {
         public LeapDatePickerDialog(Calendar calendar, DateOrder order = DateOrder.DMY) : base(calendar, order) { }
 
         protected override void populateDateGrid() {

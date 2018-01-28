@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace DeCamp {
-    class CampaignState {
+    public class CampaignState {
         public Timestamp timestamp;
         private Dictionary<String, Character> party;
         //loot
@@ -49,7 +49,7 @@ namespace DeCamp {
         }
     }
 
-    class Campaign {
+    public class Campaign {
         public const String gmKey = "__GM__";
 
         public String name;

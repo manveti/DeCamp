@@ -4,7 +4,7 @@ using System.Reflection;
 using System.Windows;
 
 namespace DeCamp {
-    class Ruleset {
+    public class Ruleset {
         protected class EventImpl {
             private ConstructorInfo evt, dlg;
             public Func<Campaign, Event, Timestamp, String, String, Window, EventDialog> dialog;
